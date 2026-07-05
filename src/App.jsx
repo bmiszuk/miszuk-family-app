@@ -1,4 +1,5 @@
 import "./index.css";
+import GroceryList from "./GroceryList";
 
 function Card({ title, children }) {
   return (
@@ -19,7 +20,7 @@ export default function App() {
 
       <div className="grid">
         <Card title="🛒 Grocery List">
-          <p>Coming soon...</p>
+           <GroceryList />
         </Card>
 
         <Card title="📢 Family News">
