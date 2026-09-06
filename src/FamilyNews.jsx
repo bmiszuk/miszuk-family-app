@@ -16,7 +16,7 @@ export default function FamilyNews() {
   const action = useAction(collection.refresh);
   const [editor, setEditor] = useState(null);
   return <section className="card" id="news" aria-label="Family News">
-    <SectionHeader icon="📢" title="Family News" subtitle="Little updates. Big announcements." />
+    <SectionHeader icon="news" title="Family News" subtitle="Little updates. Big announcements." />
     {!editor && <button onClick={() => setEditor({})}>Share an update</button>}
     {editor && <NewsForm key={editor.id || 'new'} post={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
       const saved = await action.run(() => api(editor.id ? `news/${editor.id}` : 'news', { method: editor.id ? 'PATCH' : 'POST', body: { ...values, ...(editor.id ? { version: editor.version } : {}) } }), 'News saved.');

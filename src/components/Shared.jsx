@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Icon from './Icon.jsx';
 export function ErrorMessage({ error }) {
   if (!error) return null;
   return <div className="error" role="alert"><p>{error.message}</p>{error.status === 401 && <a href="/cdn-cgi/access/login">Sign in again</a>}{error.status === 409 && <p>If you were editing, cancel and reopen the item to load the latest version.</p>}</div>;
@@ -14,5 +15,5 @@ export function DeleteButton({ label, disabled, onDelete }) {
   return <span className="confirm-delete"><span>Remove this?</span><button type="button" className="danger" disabled={disabled} onClick={async () => { if (await onDelete()) setConfirming(false); }}>Yes, remove</button><button type="button" className="quiet" disabled={disabled} onClick={() => setConfirming(false)}>Keep</button></span>;
 }
 export function SectionHeader({ icon, title, subtitle, count }) {
-  return <header className="section-header"><div className="section-title"><h2><span aria-hidden="true">{icon}</span> {title}</h2>{count !== undefined && <span className="count">{count}</span>}</div><p className="muted">{subtitle}</p></header>;
+  return <header className="section-header"><div className="section-title"><h2><span className="section-icon"><Icon name={icon} /></span> {title}</h2>{count !== undefined && <span className="count">{count}</span>}</div><p className="muted">{subtitle}</p></header>;
 }

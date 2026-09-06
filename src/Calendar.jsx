@@ -43,7 +43,7 @@ export default function Calendar() {
   const [showPast, setShowPast] = useState(false);
   const events = (collection.items || []).filter(event => showPast || !eventIsPast(event));
   return <section className="card" id="calendar" aria-label="Calendar">
-    <SectionHeader icon="📅" title="Calendar" subtitle="Make room for time together." />
+    <SectionHeader icon="calendar" title="Calendar" subtitle="Make room for time together." />
     {!editor && <button onClick={() => setEditor({})}>Add an event</button>}
     {editor && <EventForm key={editor.id || 'new'} event={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
       const saved = await action.run(() => api(editor.id ? `events/${editor.id}` : 'events', { method: editor.id ? 'PATCH' : 'POST', body: { ...values, ...(editor.id ? { version: editor.version } : {}) } }), 'Event saved.');
