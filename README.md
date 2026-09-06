@@ -84,10 +84,17 @@ Do not create a new Worker, new database, or temporary account. Keep the existin
 
 Rollback: restore the prior Worker version in Cloudflare if needed. The additive tables can remain unused; no destructive down-migration is required. Verify D1 backup/Time Travel settings as part of the production handoff.
 
-No production migration or deployment was performed when this release was prepared. Only the unauthenticated Access redirects for the custom hostname were observed; live account settings and production data were not accessible.
+Production release verified on 2026-09-05 (America/Chicago):
+
+- Application commit: fef4f06. Worker deployment ID: b064b53463f54dce918a017732334822.
+- Backed up remote family-db outside Git and applied 0002_household_portal.sql; 0001 was already applied.
+- Deployed to the existing miszuk-family-app Worker. The existing family.miszuk.com/* route selects it; the separate miszuk-family custom-domain origin was preserved.
+- Used Cloudflare's direct assets/module upload API with a Vite Worker bundle because this Windows sandbox prevented Wrangler's native esbuild from resolving the entry file. The normal npm deployment command remains suitable for unrestricted development environments.
+- Signed into family.miszuk.com through Access. Verified grocery creation/completion, news creation/editing, calendar creation/date editing, reload persistence, and a second page loading the same records. Queried remote D1 to confirm the persisted values, then removed all three test records through the UI and confirmed their soft deletion.
+- Unauthenticated requests redirect to Access. Testing with a second family identity/device and a disallowed identity remains a household acceptance check; these were not exercised during this deployment.
 
 ## Repository hygiene
 
-The original repository tracks `.wrangler` SQLite state despite ignoring it. This source package excludes local databases, credentials, dependencies, and generated builds. When applying changes to the existing Git checkout, remove the already-tracked local state with `git rm -r --cached .wrangler` and inspect that staged change. This removes it from future commits without deleting local files; historical copies remain in Git history.
+Previously tracked `.wrangler` SQLite state was removed from the Git index in this release. Local databases, credentials, dependencies, and generated builds are excluded. Historical database copies remain in Git history.
 
 Keep database backups, `.dev.vars`, and `.env` out of Git. The unused Vite starter assets/styles are retained to avoid mixing unrelated cleanup into this release.
