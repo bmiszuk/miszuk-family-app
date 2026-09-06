@@ -10,7 +10,10 @@ A private household portal at https://family.miszuk.com. React/Vite provides the
 - All three sections refresh every 15 seconds while visible and when the window regains focus.
 - Version checks reject stale changes instead of overwriting another family member's work. Cancel and reopen an editor after a conflict to use the latest record.
 - Removed records are soft-deleted. They disappear from the app but remain in D1 for recovery; no restore UI is included yet.
-- House Projects, Photos, Recipes, and Documents are labeled as planned. They are not implemented in this release.
+- Home summarizes existing groceries, calendar events, and news. Navigation opens one section at a time, with a fixed bottom bar on phones and top navigation on desktop.
+- Grocery rows use inline quantities, text-to-edit controls, and compact removal controls with confirmation.
+- Section URLs (`#home`, `#groceries`, `#calendar`, `#news`) support direct links and browser back/forward. Switching sections preserves editor drafts; reloading still clears unsaved drafts.
+- House Projects, Photos, Recipes, Documents, and family-directory features are not implemented or exposed in navigation.
 
 This is one shared household: every member allowed through this Access application can read, add, edit, and remove household content. It is not a multi-family service. Original family/person APIs and tables are retained for compatibility and now sit behind the same authentication checks.
 
@@ -69,7 +72,7 @@ Old groceries are imported only after a member clicks the import button on the *
 npm run check
 ```
 
-This runs ESLint, 19 Node tests, and the production frontend build. Tests cover additive migration preservation, CRUD, stale-write protection, import retry behavior, validation, actual Access JWT verification, calendar dates, and the Worker against D1 in Cloudflare's local runtime. The unit SQL adapter uses Node's built-in SQLite; the runtime integration test additionally checks actual D1 behavior.
+This runs ESLint, 22 Node tests, and the production frontend build. Tests cover additive migration preservation, CRUD, stale-write protection, import retry behavior, validation, actual Access JWT verification, calendar dates, and the Worker against D1 in Cloudflare's local runtime. The unit SQL adapter uses Node's built-in SQLite; the runtime integration test additionally checks actual D1 behavior.
 
 ## Deploy to the existing Cloudflare account
 
