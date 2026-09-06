@@ -82,7 +82,7 @@ export async function handlePeople(request, env) {
         },
         201
       );
-    } catch (error) {
+    } catch {
       return jsonResponse({ error: 'Failed to create person' }, 500);
     }
   }

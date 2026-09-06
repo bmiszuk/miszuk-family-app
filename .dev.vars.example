@@ -1,0 +1,5 @@
+# Only used by `wrangler dev`; do not add LOCAL_DEV to production bindings.
+# npm run dev supplies LOCAL_DEV on the command line and binds to loopback.
+# To test real Access validation instead, omit LOCAL_DEV and provide:
+ACCESS_TEAM_DOMAIN="broken-bush-7200.cloudflareaccess.com"
+ACCESS_AUD="2d6488c2019b05588c29467e0bd8173b74d46c437efd7225834e9a84090ef1c8"

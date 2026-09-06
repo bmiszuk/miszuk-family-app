@@ -1,10 +1,11 @@
-# D1 Migrations
+# D1 migrations
 
-This directory contains SQL migrations for the Miszuk Family App D1 database.
+`0001_initial_schema.sql` is the unchanged original schema. `0002_household_portal.sql` adds shared groceries, news, and household calendar tables without modifying existing records.
 
-- Apply migrations with Wrangler:
-  `npx wrangler d1 migrations apply family-db --local`
-  or
-  `npx wrangler d1 migrations apply family-db`
+```sh
+npm run db:local          # apply to local development D1
+npm run db:remote:list    # inspect production migration history/pending changes
+npm run db:remote:apply   # explicitly apply to production; export a backup first
+```
 
-- The initial migration creates tables for families, people, relationships, and events.
+The deploy script does not apply migrations automatically. Confirm the database binding and migration history before remote execution. The portable preview keeps its own migration ledger and local database, separate from Wrangler's normal local state.

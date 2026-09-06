@@ -23,3 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 .wrangler/
+.dev.vars
+.env
+.env.*
+!.env.example
+!.dev.vars.example
+family-db-backup*.sql
