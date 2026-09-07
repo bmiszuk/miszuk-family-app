@@ -1,4 +1,5 @@
 const paths = {
+  directory: <><circle cx="9" cy="7" r="3" /><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v3" /></>,
   home: <><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" /><path d="M9 7h6" /></>,
   groceries: <><path d="M3 4h2l3 12h11l2-8H6" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></>,
   news: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M7 8h4v4H7zM15 8h2M15 12h2M7 16h10" /></>,

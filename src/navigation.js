@@ -5,6 +5,7 @@ export const sections = [
   { id: 'groceries', label: 'Groceries', icon: 'groceries' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar' },
   { id: 'news', label: 'News', icon: 'news' },
+  { id: 'directory', label: 'Directory', icon: 'directory' },
 ];
 export function sectionFromHash(hash) {
   const id = hash.replace(/^#/, '');

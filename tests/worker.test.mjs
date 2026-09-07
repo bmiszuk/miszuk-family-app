@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { build } from 'vite';
 import { Miniflare } from 'miniflare';
+import { migrationStatements } from '../scripts/migration-statements.mjs';
 
 test('Cloudflare runtime: migrations, shared writes, conflict checks, and persisted reads', async () => {
   const result = await build({ configFile: false, logLevel: 'silent', build: { write: false, lib: { entry: 'worker.js', formats: ['es'], fileName: 'worker' }, minify: false } });
@@ -11,9 +12,9 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true' }, d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
-      await db.batch(sql.split(';').map(value => value.trim()).filter(Boolean).map(value => db.prepare(value)));
+      await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }
     async function call(path, method = 'GET', body) {
       const response = await mf.dispatchFetch(`http://localhost/api/${path}`, { method, ...(body ? { body: JSON.stringify(body), headers: { 'Content-Type': 'application/json' } } : {}) });
@@ -33,6 +34,16 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     assert.equal((await call('events', 'POST', { title: 'Holiday', all_day: true, start_at: '2026-12-25', timezone: 'America/Chicago' })).status, 201);
     assert.equal((await call('news')).data.items.length, 1);
     assert.equal((await call('events')).data.items.length, 1);
+    const p = (await call('directory/people', 'POST', { first_name: 'Alex', last_name: 'Family', birth_date: '12-31' })).data.item;
+    const q = (await call('directory/people', 'POST', { first_name: 'Sam', last_name: 'Family', birth_date: '1990-01-01' })).data.item;
+    assert.ok(p.id); assert.ok(q.id);
+    const marriage = (await call('directory/relationships', 'POST', { person1_id: p.id, person2_id: q.id, relationship_type: 'spouse', anniversary_date: '06-20' })).data.item;
+    assert.ok(marriage.id);
+    assert.equal((await call('directory/relationships', 'POST', { person1_id: q.id, person2_id: p.id, relationship_type: 'spouse' })).status, 409);
+    assert.equal((await call(`directory/people/${p.id}`, 'DELETE', { version: 1 })).status, 409);
+    assert.equal((await call('directory')).data.relationships.length, 1);
+    assert.equal((await call(`directory/relationships/${marriage.id}`, 'DELETE', { version: 1 })).status, 200);
+    assert.equal((await call(`directory/people/${p.id}`, 'DELETE', { version: 1 })).status, 200);
     const production = await mf.dispatchFetch('https://family.miszuk.com/api/me');
     assert.equal(production.status, 503);
   } finally { await mf.dispose(); }

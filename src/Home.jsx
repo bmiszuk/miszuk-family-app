@@ -3,8 +3,11 @@ import { ErrorMessage } from './components/Shared.jsx';
 import Icon from './components/Icon.jsx';
 import { eventDateLabel } from './calendar.js';
 import { latestNews, nextEvent } from './navigation.js';
+import { useDirectory } from './useDirectory.js';
+import Celebrations from './Celebrations.jsx';
 
 export default function Home() {
+  const directory = useDirectory();
   const groceries = useCollection('groceries');
   const events = useCollection('events');
   const news = useCollection('news');
@@ -14,6 +17,8 @@ export default function Home() {
   return <section className="home-view" aria-label="Home">
     <h2>A little closer to home</h2>
     <p className="muted home-intro">Your family’s day, at a glance.</p>
+    <ErrorMessage error={directory.error} />
+    <Celebrations directory={directory} compact />
     <div className="home-grid">
       <article className="card summary-card"><Icon name="groceries" /><h3>Groceries</h3>
         <ErrorMessage error={groceries.error} />

@@ -13,7 +13,8 @@ A private household portal at https://family.miszuk.com. React/Vite provides the
 - Home summarizes existing groceries, calendar events, and news. Navigation opens one section at a time, with a fixed bottom bar on phones and top navigation on desktop.
 - Grocery rows use inline quantities, text-to-edit controls, and compact removal controls with confirmation.
 - Section URLs (`#home`, `#groceries`, `#calendar`, `#news`) support direct links and browser back/forward. Switching sections preserves editor drafts; reloading still clears unsaved drafts.
-- House Projects, Photos, Recipes, Documents, and family-directory features are not implemented or exposed in navigation.
+- Family Directory supports birthdays with optional years, one shared marriage/anniversary record, and directed parent/child relationships. No login or email is needed for a directory person.
+- House Projects, Photos, Recipes, and Documents remain unimplemented.
 
 This is one shared household: every member allowed through this Access application can read, add, edit, and remove household content. It is not a multi-family service. Original family/person APIs and tables are retained for compatibility and now sit behind the same authentication checks.
 
@@ -59,6 +60,7 @@ Browser mutations use JSON and reject cross-site/mismatched Origin headers. API 
 
 - `0001_initial_schema.sql`: existing `families`, `people`, `relationships`, `events`.
 - `0002_household_portal.sql`: additive `grocery_items`, `news_posts`, `household_events`.
+- `0003_family_directory.sql`: reuses `people` and `relationships`; adds record versions, soft deletion, a marriage anniversary date, and relationship protection triggers. Creates a default family only when no family exists.
 
 The older tables are neither renamed nor deleted. The new household calendar deliberately uses its own table so legacy person-linked events are not silently repurposed or migrated.
 
@@ -72,7 +74,7 @@ Old groceries are imported only after a member clicks the import button on the *
 npm run check
 ```
 
-This runs ESLint, 22 Node tests, and the production frontend build. Tests cover additive migration preservation, CRUD, stale-write protection, import retry behavior, validation, actual Access JWT verification, calendar dates, and the Worker against D1 in Cloudflare's local runtime. The unit SQL adapter uses Node's built-in SQLite; the runtime integration test additionally checks actual D1 behavior.
+This runs ESLint, 30 Node tests, and the production frontend build. Tests cover additive migration preservation, CRUD, stale-write protection, import retry behavior, validation, actual Access JWT verification, calendar dates, and the Worker against D1 in Cloudflare's local runtime. The unit SQL adapter uses Node's built-in SQLite; the runtime integration test additionally checks actual D1 behavior.
 
 ## Deploy to the existing Cloudflare account
 
@@ -101,3 +103,13 @@ Production release verified on 2026-09-05 (America/Chicago):
 Previously tracked `.wrangler` SQLite state was removed from the Git index in this release. Local databases, credentials, dependencies, and generated builds are excluded. Historical database copies remain in Git history.
 
 Keep database backups, `.dev.vars`, and `.env` out of Git. The unused Vite starter assets/styles are retained to avoid mixing unrelated cleanup into this release.
+
+## Directory release
+
+Rollback point: pre-directory-2026-09-06 (c4297b1). The additive migration can remain when rolling back the Worker.
+
+Birthdays reuse people.birth_date: MM-DD without a year, or YYYY-MM-DD with one. Marriage links use relationship_type=spouse, with canonical spouse IDs and one anniversary_date; parent links use person1_id as parent and person2_id as child. The API rejects duplicate marriages, a second current spouse, self-links, duplicate parent links, and parent cycles. Remove a person's links first before confirming deletion; all removals are soft deletes. These are household relationships, not a marriage-history or genealogy system.
+
+Home shows today's celebrations prominently and up to five upcoming celebrations; Directory shows the complete next-30-day list. Dates use America/Chicago, including year rollover. February 29 is observed February 28 in non-leap years. Ages appear only for birthdays with a recorded year. Anniversary year is optional too. Notifications are on the dashboard only, not email or push messages.
+
+Verified locally: people add/edit/remove, spouse and parent/child assignment from both directions, anniversary editing, relationship removal, protected deletion, reload persistence, and birthday display with and without age. Desktop 1440x1000 and phone 375x812 layouts were inspected in-browser. Existing household feature tests and actual Cloudflare D1 runtime tests remain in the suite.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './index.css';
 import Home from './Home.jsx';
+import Directory from './Directory.jsx';
 import { sections, sectionFromHash } from './navigation.js';
 import GroceryList from './GroceryList.jsx';
 import FamilyNews from './FamilyNews.jsx';
@@ -38,6 +39,7 @@ export default function App() {
     <main id="main" tabIndex={-1}>
       {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
         {section === 'home' && <Home />}
+        {section === 'directory' && <Directory />}
         <div className="section-view" hidden={section !== 'groceries'}><GroceryList /></div>
         <div className="section-view" hidden={section !== 'calendar'}><Calendar /></div>
         <div className="section-view" hidden={section !== 'news'}><FamilyNews /></div>

@@ -5,6 +5,7 @@ import { resolve, sep, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 import { Miniflare } from 'miniflare';
+import { migrationStatements } from './migration-statements.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = resolve(root, 'dist');
@@ -31,7 +32,7 @@ try {
   for (const name of (await readdir(resolve(root, 'migrations'))).filter(name => name.endsWith('.sql')).sort()) {
     if (await db.prepare('SELECT name FROM preview_migrations WHERE name = ?').bind(name).first()) continue;
     const sql = (await readFile(resolve(root, 'migrations', name), 'utf8')).replace(/--[^\n]*/g, '');
-    await db.batch([...sql.split(';').map(value => value.trim()).filter(Boolean).map(value => db.prepare(value)), db.prepare('INSERT INTO preview_migrations(name) VALUES(?)').bind(name)]);
+    await db.batch([...migrationStatements(sql).map(value => db.prepare(value)), db.prepare('INSERT INTO preview_migrations(name) VALUES(?)').bind(name)]);
   }
   console.log(`Family preview: ${await mf.ready}`);
   console.log('Local data only. Ctrl+C to stop. Rebuild and restart after source changes.');
