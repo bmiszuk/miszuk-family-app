@@ -113,3 +113,11 @@ Birthdays reuse people.birth_date: MM-DD without a year, or YYYY-MM-DD with one.
 Home shows today's celebrations prominently and up to five upcoming celebrations; Directory shows the complete next-30-day list. Dates use America/Chicago, including year rollover. February 29 is observed February 28 in non-leap years. Ages appear only for birthdays with a recorded year. Anniversary year is optional too. Notifications are on the dashboard only, not email or push messages.
 
 Verified locally: people add/edit/remove, spouse and parent/child assignment from both directions, anniversary editing, relationship removal, protected deletion, reload persistence, and birthday display with and without age. Desktop 1440x1000 and phone 375x812 layouts were inspected in-browser. Existing household feature tests and actual Cloudflare D1 runtime tests remain in the suite.
+
+## iPhone installation / PWA
+
+In Safari, sign in at https://family.miszuk.com, open Share, choose Add to Home Screen, keep Open as Web App enabled when offered, and confirm the name Miszuk Family. Launch the new House M icon. iOS applies the icon's corner mask; PNGs have an opaque square background. The vector master is public/app-icons/house-m.svg; PNG sizes are 1024, 512, 192, 180 (Apple), and 32 (favicon), plus a separately padded 512 maskable icon.
+
+The manifest uses credentials because Cloudflare Access protects this origin. This is an online-only install: no service worker, offline family-data cache, or authentication bypass is introduced. Access continues to control all requests. A valid session should load the portal; an expired session must complete email-PIN login. Safari/installed-app cookie sharing and the external Access redirect returning to standalone mode require physical-iPhone verification. Desktop device-size testing cannot verify the iOS installation sheet, Home Screen mask, standalone storage, or status/Home-indicator insets. No install banner or push notifications are included.
+
+Rollback before PWA changes: pre-pwa-2026-09-07 (1ab05d8). PWA changes require no D1 migration.

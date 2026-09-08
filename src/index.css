@@ -188,3 +188,9 @@ select { width: 100%; min-width: 0; min-height: 48px; border: 1px solid #cbd5cd;
   .directory-toolbar label { flex-basis: 100%; }
   .celebrations { padding: 16px; }
 }
+
+/* Keep standalone content clear of the notch and Home indicator. */
+@media (display-mode: standalone) and (max-width: 700px) {
+  .page { padding-top: max(20px, env(safe-area-inset-top, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .app-nav { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: max(10px, env(safe-area-inset-right, 0px)); }
+}
