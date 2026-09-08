@@ -62,7 +62,7 @@ test('directory person CRUD, optional birth year, stale edits and household pres
 
 test('directory rejects invalid birthdays and self or missing relationships', async t => {
   const {request} = fixture(t);
-  for (const birth_date of ['','02-30','2023-02-29','13-01','2000-00-01','3000-01-01']) {
+  for (const birth_date of ['02-30','2023-02-29','13-01','2000-00-01','3000-01-01']) {
     assert.equal((await request('/api/directory/people','POST',{first_name:'Bad',last_name:'Date',birth_date})).status,400);
   }
   const a = await add(request,'Leap','02-29');
@@ -99,4 +99,16 @@ test('parent links derive both directions and reject duplicates and cycles', asy
   const rows = (await request('/api/directory')).data.relationships;
   assert.equal(rows.filter(r=>r.person2_id===b.id)[0].person1_id,a.id);
   assert.equal(rows.filter(r=>r.person1_id===b.id)[0].person2_id,c.id);
+});
+
+
+test('unknown birthdays remain blank through creation and editing', async t => {
+  const {request} = fixture(t);
+  const person = await add(request, 'Unknown', '');
+  assert.equal(person.birth_date, null);
+  const edited = await request('/api/directory/people/' + person.id, 'PATCH', {...person, first_name: 'Updated'});
+  assert.equal(edited.status, 200);
+  assert.equal(edited.data.item.birth_date, null);
+  const invalid = await request('/api/directory/people/' + person.id, 'PATCH', {...edited.data.item, birth_date: '09-00'});
+  assert.equal(invalid.status, 400);
 });

@@ -28,9 +28,9 @@ function PersonForm({ person, busy, onSave, onCancel }) {
     <fieldset disabled={busy} className="plain-fields">
       <label>First name<input name="first_name" required maxLength={100} defaultValue={person?.first_name || ''} /></label>
       <label>Last name<input name="last_name" maxLength={100} defaultValue={person?.last_name || ''} /></label>
-      <DateFields value={person?.birth_date} prefix="birth" title="Birthday" />
+      <DateFields value={person?.birth_date} prefix="birth" title="Birthday" optional />
     </fieldset>
-    <p className="muted">Only month and day are needed. No login or email address is required.</p>
+    <p className="muted">Leave the birthday blank if unknown. When entered, only month and day are needed. No login or email address is required.</p>
     <div className="actions"><button disabled={busy}>Save person</button><button type="button" className="quiet" disabled={busy} onClick={onCancel}>Cancel</button></div>
   </form>;
 }

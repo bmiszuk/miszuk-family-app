@@ -29,7 +29,7 @@ async function directoryRequest(request, env, kind, id) {
   if (request.method === 'DELETE') {
     record = await db.prepare(`UPDATE ${kind} SET deleted_at=?, updated_at=?, version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *`).bind(now, now, id, version(body)).first();
   } else if (kind === 'people') {
-    const values = [stringField(body.first_name, 'First name', 100), stringField(body.last_name, 'Last name', 100, false), dateField(body.birth_date)];
+    const values = [stringField(body.first_name, 'First name', 100), stringField(body.last_name, 'Last name', 100, false), dateField(body.birth_date, false)];
     if (request.method === 'POST') {
       const family = await db.prepare('SELECT id FROM families ORDER BY created_at, id LIMIT 1').first();
       if (!family) throw new HttpError(409, 'The family record is missing.');
