@@ -14,3 +14,15 @@ test('chat is chronological, only pinned messages reach Home, unpin keeps messag
  assert.deepEqual(chronologicalMessages(posts).map(x=>x.id),['a','b']);assert.equal(posts[0].id,'b');
  assert.deepEqual(activeNotices(posts).map(x=>x.id),['b']);posts[0].home_notice=false;assert.equal(activeNotices(posts).length,0);assert.equal(chronologicalMessages(posts).length,2);
 });
+
+import {selectedPerson} from '../src/familyDisplay.js';
+test('mapped defaults apply on new forms, preserve edits, clearing and alternate selections',()=>{
+ for(const field of ['requester_person_id','sender_person_id']){
+  assert.equal(selectedPerson(undefined,null,field,'me'),'me');
+  assert.equal(selectedPerson(undefined,null,field,null),'');
+  assert.equal(selectedPerson('',null,field,'me'),'');
+  assert.equal(selectedPerson('other',null,field,'me'),'other');
+  assert.equal(selectedPerson(undefined,{[field]:null},field,'me'),'');
+  assert.equal(selectedPerson(undefined,{[field]:'saved'},field,'me'),'saved');
+ }
+});

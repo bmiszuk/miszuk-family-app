@@ -4,14 +4,15 @@ import {useAction, useCollection} from './useCollection.js';
 import {useDirectory} from './useDirectory.js';
 import {CollectionStatus, DeleteButton, SectionHeader, ErrorMessage} from './components/Shared.jsx';
 import PersonSelect from './components/PersonSelect.jsx';
-import {chronologicalMessages, senderName, postedTime} from './familyDisplay.js';
-function MessageForm({post, people, busy, onSave, onCancel}) {
+import {chronologicalMessages, senderName, postedTime, selectedPerson} from './familyDisplay.js';
+function MessageForm({post, people, busy, onSave, onCancel, currentPersonId}) {
   const [body,setBody] = useState(post?.body || '');
-  const [sender,setSender] = useState(post?.sender_person_id || '');
+  const [selection,setSender] = useState();
+  const sender = selectedPerson(selection, post, 'sender_person_id', currentPersonId);
   const [notice,setNotice] = useState(Boolean(post?.home_notice));
   return <form className="stack-form chat-composer" onSubmit={async event => {
     event.preventDefault();
-    if (await onSave({title:post?.title || 'Chat message',body,sender_person_id:sender || null,home_notice:notice})) {setBody('');setSender('');setNotice(false);}
+    if (await onSave({title:post?.title || 'Chat message',body,sender_person_id:sender || null,home_notice:notice})) {setBody('');setSender(undefined);setNotice(false);}
   }}>
     {post?.title && post.title !== 'Chat message' && <p className="muted">Headline retained: {post.title}</p>}
     <label>{post ? 'Edit message' : 'Message'}<textarea rows={2} value={body} onChange={event=>setBody(event.target.value)} maxLength={5000} required disabled={busy} /></label>
@@ -22,7 +23,7 @@ function MessageForm({post, people, busy, onSave, onCancel}) {
     </div>
   </form>;
 }
-export default function FamilyNews() {
+export default function FamilyNews({currentPersonId}) {
   const collection=useCollection('news'),directory=useDirectory();
   const action=useAction(collection.refresh);
   const [editor,setEditor]=useState(null);
@@ -42,7 +43,7 @@ export default function FamilyNews() {
           <DeleteButton label="message" disabled={action.busy || Boolean(editor)} onDelete={()=>action.run(()=>api(`news/${post.id}`,{method:'DELETE',body:{version:post.version}}),'Message removed.')} />
         </div></>}
     </article>)}</div>
-    <MessageForm people={people} busy={action.busy || Boolean(editor)} onSave={values=>action.run(()=>api('news',{method:'POST',body:values}),'Message sent.')} />
+    <MessageForm currentPersonId={currentPersonId} people={people} busy={action.busy || Boolean(editor)} onSave={values=>action.run(()=>api('news',{method:'POST',body:values}),'Message sent.')} />
     <p className="sync-note">Refreshes every 15 seconds and when you return. <button className="text-button" onClick={collection.refresh}>Refresh now</button></p>
   </section>;
 }

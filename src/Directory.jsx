@@ -23,11 +23,12 @@ function formDate(form, prefix) {
 function PersonForm({ person, busy, onSave, onCancel }) {
   return <form className="stack-form editor" onSubmit={event => {
     event.preventDefault(); const form = new FormData(event.currentTarget);
-    void onSave({ first_name: form.get('first_name'), last_name: form.get('last_name'), birth_date: formDate(form, 'birth') });
+    void onSave({ first_name: form.get('first_name'), last_name: form.get('last_name'), birth_date: formDate(form, 'birth'), login_email: form.get('login_email') });
   }}><h3>{person ? 'Edit person' : 'Add a person'}</h3>
     <fieldset disabled={busy} className="plain-fields">
       <label>First name<input name="first_name" required maxLength={100} defaultValue={person?.first_name || ''} /></label>
       <label>Last name<input name="last_name" maxLength={100} defaultValue={person?.last_name || ''} /></label>
+      <label>Login email (optional)<input name="login_email" type="email" autoCapitalize="none" autoCorrect="off" maxLength={254} defaultValue={person?.login_email || ''} /></label>
       <DateFields value={person?.birth_date} prefix="birth" title="Birthday" optional />
     </fieldset>
     <p className="muted">Leave the birthday blank if unknown. When entered, only month and day are needed. No login or email address is required.</p>

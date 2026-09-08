@@ -11,6 +11,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0002_household_portal.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0003_family_directory.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0004_chat_requester.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0005_login_identity.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {

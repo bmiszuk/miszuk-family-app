@@ -12,7 +12,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true' }, d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
       await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }

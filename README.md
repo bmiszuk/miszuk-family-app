@@ -129,3 +129,7 @@ Migration 0004_chat_requester.sql adds nullable directory-person references to g
 Home shows only explicitly pinned notices and short, disambiguated birthday/anniversary names. Directory names and dates are unchanged. Chat uses existing 15-second polling, with a bounded scroll area; it follows new messages only while the reader is at the bottom. No push notifications or real-time service was added.
 
 Rollback before these changes: pre-chat-requester-2026-09-07 (ad80325). The additive columns may remain when rolling back the app; old clients do not use them. A private production D1 export was taken before migration.
+
+## Login identity mapping
+
+Migration 0005_login_identity.sql adds optional login_email to people with a case-insensitive unique index for active people. Enter addresses in the existing Directory editor; no addresses are inferred or populated. After changing a login email, reload the app to refresh /api/me. The server matches only the verified Cloudflare Access email; the browser cannot supply the authenticated identity. Unmapped logins retain existing behavior. New Chat and grocery forms default to the mapped person after each successful submission; saved records retain their sender/requester, and selections can still be changed or cleared. Rollback: pre-identity-2026-09-08 (d56e82b); the additive column can remain during an app rollback.

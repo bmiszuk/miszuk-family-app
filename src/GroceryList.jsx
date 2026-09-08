@@ -1,5 +1,5 @@
 import { useDirectory } from './useDirectory.js';
-import { displayNames } from './familyDisplay.js';
+import { displayNames, selectedPerson } from './familyDisplay.js';
 import PersonSelect from './components/PersonSelect.jsx';
 import { ErrorMessage } from './components/Shared.jsx';
 import { useState } from 'react';
@@ -17,20 +17,21 @@ function oldGroceries() {
     return valid.length ? { saved, items: valid } : null;
   } catch { return null; }
 }
-function GroceryForm({ item, busy, onSave, onCancel, people }) {
+function GroceryForm({ item, busy, onSave, onCancel, people, currentPersonId }) {
   const [name, setName] = useState(item?.name || '');
-  const [requester, setRequester] = useState(item?.requester_person_id || '');
+  const [selection, setRequester] = useState();
+  const requester = selectedPerson(selection, item, 'requester_person_id', currentPersonId);
   const [quantity, setQuantity] = useState(item?.quantity || '');
   return <form className="stack-form grocery-form" onSubmit={async event => {
     event.preventDefault();
-    if (await onSave({ name: name.trim(), quantity: quantity.trim(), done: item?.done || false, requester_person_id: requester || null })) { setName(''); setQuantity(''); setRequester(''); }
+    if (await onSave({ name: name.trim(), quantity: quantity.trim(), done: item?.done || false, requester_person_id: requester || null })) { setName(''); setQuantity(''); setRequester(undefined); }
   }}>
     <label>{item ? 'Item name' : 'What do we need?'}<input value={name} onChange={e => setName(e.target.value)} placeholder="Milk, apples, coffee…" maxLength={160} required disabled={busy} /></label>
     <label>Quantity (optional)<input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="2 cartons" maxLength={80} disabled={busy} /></label><PersonSelect label="Requested by (optional)" people={people} value={requester} onChange={setRequester} disabled={busy} /><button type="submit" disabled={busy || !name.trim()}>{item ? 'Save item' : 'Add item'}</button>
     {onCancel && <button type="button" className="quiet" onClick={onCancel} disabled={busy}>Cancel editing</button>}
   </form>;
 }
-export default function GroceryList() {
+export default function GroceryList({currentPersonId}) {
   const directory = useDirectory();
   const people = directory.data?.people || [];
   const names = displayNames(people);
@@ -47,7 +48,7 @@ export default function GroceryList() {
       try { localStorage.setItem(`${STORAGE_KEY}-imported`, legacy.saved); } catch { /* The shared import is already durable. */ }
       setLegacy(null);
     }, 'Your browser list is now shared.')}>Import into shared list</button></div>}
-    <ErrorMessage error={directory.error} /><GroceryForm people={people} busy={action.busy} onSave={values => action.run(() => api('groceries', { method: 'POST', body: values }), 'Item added.')} />
+    <ErrorMessage error={directory.error} /><GroceryForm currentPersonId={currentPersonId} people={people} busy={action.busy} onSave={values => action.run(() => api('groceries', { method: 'POST', body: values }), 'Item added.')} />
     <CollectionStatus collection={collection} action={action} />
     {collection.items?.length === 0 && <p className="empty">The list is clear. Add the first thing you need.</p>}
     <p className="grocery-hint muted">Tap an item’s name to edit.</p>

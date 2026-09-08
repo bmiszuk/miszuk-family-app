@@ -19,3 +19,8 @@ export function senderName(post, people) {
   return displayNames(people).get(post.sender_person_id) || post.author_name;
 }
 export const postedTime = value => new Date(value).toLocaleString('en-US', {timeZone:'America/Chicago',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+
+// Undefined means use the mapped default; an explicit empty selection stays cleared.
+export function selectedPerson(selection, record, field, currentPersonId) {
+  return selection ?? (record ? record[field] || '' : currentPersonId || '');
+}

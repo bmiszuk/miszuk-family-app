@@ -11,6 +11,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0002_household_portal.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0003_family_directory.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0004_chat_requester.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0005_login_identity.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -112,4 +113,18 @@ test('unknown birthdays remain blank through creation and editing', async t => {
   assert.equal(edited.data.item.birth_date, null);
   const invalid = await request('/api/directory/people/' + person.id, 'PATCH', {...edited.data.item, birth_date: '09-00'});
   assert.equal(invalid.status, 400);
+});
+
+test('login mapping normalizes email, rejects duplicates, preserves omissions and ignores client identity', async t => {
+  const {request}=fixture(t);
+  const a=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:' FAMILY@LOCALHOST ',birth_date:null})).data.item;
+  assert.equal(a.login_email,'family@localhost');
+  assert.equal((await request('/api/me','GET',undefined,{headers:{'Cf-Access-Authenticated-User-Email':'spoof@example.com'}})).data.member.person.id,a.id);
+  const duplicate=await request('/api/directory/people','POST',{first_name:'Other',login_email:'Family@Localhost'});
+  assert.equal(duplicate.status,409);
+  const edited=(await request(`/api/directory/people/${a.id}`,'PATCH',{first_name:'Renamed',version:1})).data.item;
+  assert.equal(edited.login_email,'family@localhost');
+  assert.equal((await request(`/api/directory/people/${a.id}`,'PATCH',{...edited,login_email:'not an email'})).status,400);
+  assert.equal((await request(`/api/directory/people/${a.id}`,'PATCH',{...edited,login_email:''})).status,200);
+  assert.equal((await request('/api/me')).data.member.person,null);
 });

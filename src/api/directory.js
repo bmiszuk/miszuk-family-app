@@ -9,6 +9,14 @@ function dateField(value, required = true) {
   if (parsed.year && value > chicagoDate()) throw new HttpError(400, 'A birth or wedding date cannot be in the future.');
   return value;
 }
+function loginEmail(value) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string') throw new HttpError(400, 'Enter a valid login email.');
+  const email = value.trim().toLowerCase();
+  if (!email) return null;
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+$/.test(email)) throw new HttpError(400, 'Enter a valid login email.');
+  return email;
+}
 function version(body) {
   if (!Number.isSafeInteger(body.version) || body.version < 1) throw new HttpError(400, 'A record version is required.');
   return body.version;
@@ -30,12 +38,16 @@ async function directoryRequest(request, env, kind, id) {
     record = await db.prepare(`UPDATE ${kind} SET deleted_at=?, updated_at=?, version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *`).bind(now, now, id, version(body)).first();
   } else if (kind === 'people') {
     const values = [stringField(body.first_name, 'First name', 100), stringField(body.last_name, 'Last name', 100, false), dateField(body.birth_date, false)];
+    let email = null;
+    if (Object.hasOwn(body, 'login_email')) email = loginEmail(body.login_email);
+    else if (id) email = (await db.prepare('SELECT login_email FROM people WHERE id=?').bind(id).first())?.login_email || null;
+    values.push(email);
     if (request.method === 'POST') {
       const family = await db.prepare('SELECT id FROM families ORDER BY created_at, id LIMIT 1').first();
       if (!family) throw new HttpError(409, 'The family record is missing.');
-      record = await db.prepare('INSERT INTO people(id,family_id,first_name,last_name,birth_date,created_at,updated_at) VALUES(?,?,?,?,?,?,?) RETURNING *').bind(crypto.randomUUID(), family.id, ...values, now, now).first();
+      record = await db.prepare('INSERT INTO people(id,family_id,first_name,last_name,birth_date,login_email,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) RETURNING *').bind(crypto.randomUUID(), family.id, ...values, now, now).first();
     } else {
-      record = await db.prepare('UPDATE people SET first_name=?,last_name=?,birth_date=?,updated_at=?,version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *').bind(...values, now, id, version(body)).first();
+      record = await db.prepare('UPDATE people SET first_name=?,last_name=?,birth_date=?,login_email=?,updated_at=?,version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *').bind(...values, now, id, version(body)).first();
     }
   } else if (request.method === 'POST') {
     if (!['spouse', 'parent'].includes(body.relationship_type)) throw new HttpError(400, 'Choose spouse or parent/child.');
@@ -55,6 +67,7 @@ async function directoryRequest(request, env, kind, id) {
 export async function handleDirectory(request, env, kind, id) {
   try { return await directoryRequest(request, env, kind, id); }
   catch (error) {
+    if (/UNIQUE constraint failed.*(?:idx_people_login_email|people.login_email)/.test(String(error.message))) throw new HttpError(409, 'That login email is already assigned to another family member.');
     const message = String(error.message).match(/directory: ([^\n]+?)(?:\s*: SQLITE|$)/)?.[1];
     if (message) throw new HttpError(409, message);
     throw error;
