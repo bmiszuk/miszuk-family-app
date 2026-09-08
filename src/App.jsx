@@ -1,3 +1,4 @@
+import Dinner from './Dinner.jsx';
 import { useEffect, useState } from 'react';
 import './index.css';
 import Home from './Home.jsx';
@@ -32,15 +33,16 @@ export default function App() {
   }, [attempt]);
   return <div className="page">
     <a className="skip-link" href="#main">Skip to content</a>
-    <header className="hero"><div><h1><span className="brand-icon"><Icon name="home" /></span> Miszuk Family</h1><p>Welcome home{member ? `, ${member.person?.first_name.split(/\s+/)[0] || member.name}` : ''}.</p></div>
-      {member && <div className="member-info"><span>{member.local ? 'Local preview' : member.email}</span>{!member.local && <a href="/cdn-cgi/access/logout">Sign out</a>}</div>}
+    <header className="hero"><div><h1><span className="brand-icon"><Icon name="home" /></span> Miszuk Family</h1></div>
+      {member && <div className="member-info"><span>{member.person?.first_name.split(/\s+/)[0] || member.name}</span>{!member.local && <a href="/cdn-cgi/access/logout">Sign out</a>}</div>}
     </header>
     {member && <nav className="section-nav app-nav" aria-label="Family sections">{sections.map(item => <a key={item.id} href={`#${item.id}`} aria-current={section === item.id ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></a>)}</nav>}
     <main id="main" tabIndex={-1}>
       {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
-        {section === 'home' && <Home />}
+        {section === 'home' && <Home member={member} />}
+        {section === 'dinner' && <Dinner member={member} />}
         {section === 'directory' && <Directory />}
-        <div className="section-view" hidden={section !== 'groceries'}><GroceryList currentPersonId={member.person?.id} /></div>
+        <div className="section-view" hidden={section !== 'groceries'}><GroceryList currentPersonId={member.person?.id} householdName={member.household?.name} /></div>
         <div className="section-view" hidden={section !== 'calendar'}><Calendar /></div>
         <div className="section-view" hidden={section !== 'chat'}><FamilyNews currentPersonId={member.person?.id} /></div>
       </>}

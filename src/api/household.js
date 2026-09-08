@@ -1,3 +1,4 @@
+import {householdIdentity} from './households.js';
 import { bodyJson, HttpError, stringField } from './errors.js';
 import { jsonResponse, isUuid } from './utils.js';
 
@@ -73,10 +74,13 @@ export async function handleHousehold(request, env, member, resource, id) {
   const fields = [...config.fields];
   if (resource === 'groceries') fields.push('requester_person_id');
   if (resource === 'news') fields.push('sender_person_id', 'home_notice'); // Only hard-coded SQL identifiers, never user input.
-  if (resource === 'groceries' && id === 'import') return importGroceries(request, env, member);
+  const householdId=resource==='groceries' ? (await householdIdentity(env,member)).household.id : null;
+  const scope=resource==='groceries' ? ' AND household_id=?' : '';
+  const scopeArgs=householdId ? [householdId] : [];
+  if (resource === 'groceries' && id === 'import') return importGroceries(request, env, member,householdId);
   if (id && !isUuid(id)) throw new HttpError(404, 'Not found.');
   if (request.method === 'GET' && !id) {
-    const { results } = await env.DB.prepare(`SELECT * FROM ${table} WHERE deleted_at IS NULL ORDER BY ${order}`).all();
+    const { results } = await env.DB.prepare(`SELECT * FROM ${table} WHERE deleted_at IS NULL${scope} ORDER BY ${order}`).bind(...scopeArgs).all();
     return jsonResponse({ items: results.map(publicRecord) });
   }
   if (request.method === 'POST' && !id) {
@@ -86,6 +90,7 @@ export async function handleHousehold(request, env, member, resource, id) {
     const recordId = crypto.randomUUID();
     const names = ['id', ...fields, 'created_by', 'created_at', 'updated_at'];
     const args = [recordId, ...values, member.id, now, now];
+    if (householdId) {names.push('household_id');args.push(householdId);}
     if (resource !== 'groceries') { names.push('author_name'); args.push(member.name); }
     const record = await env.DB.prepare(`INSERT INTO ${table} (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')}) RETURNING *`).bind(...args).first();
     return jsonResponse({ item: publicRecord(record) }, 201);
@@ -96,10 +101,10 @@ export async function handleHousehold(request, env, member, resource, id) {
     const now = new Date().toISOString();
     let record;
     if (request.method === 'DELETE') {
-      record = await env.DB.prepare(`UPDATE ${table} SET deleted_at = ?, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL RETURNING *`)
-        .bind(now, now, id, body.version).first();
+      record = await env.DB.prepare(`UPDATE ${table} SET deleted_at = ?, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL${scope} RETURNING *`)
+        .bind(now, now, id, body.version,...scopeArgs).first();
     } else {
-      const current = await env.DB.prepare(`SELECT * FROM ${table} WHERE id=? AND deleted_at IS NULL`).bind(id).first();
+      const current = await env.DB.prepare(`SELECT * FROM ${table} WHERE id=? AND deleted_at IS NULL${scope}`).bind(id,...scopeArgs).first();
       if (!current || current.version !== body.version) throw new HttpError(409, 'Someone changed this item. Refresh and try again.');
       const merged = { ...current, ...body };
       if (resource === 'groceries' && !Object.hasOwn(body, 'done')) merged.done = Boolean(current.done);
@@ -107,8 +112,8 @@ export async function handleHousehold(request, env, member, resource, id) {
       if (resource === 'news') merged.home_notice = Boolean(current.home_notice);
       if (Object.hasOwn(body, 'home_notice')) merged.home_notice = body.home_notice;
       const values = [...config.validate(merged), ...await extraValues(env, resource, merged, current)];
-      record = await env.DB.prepare(`UPDATE ${table} SET ${fields.map(field => `${field} = ?`).join(', ')}, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL RETURNING *`)
-        .bind(...values, now, id, body.version).first();
+      record = await env.DB.prepare(`UPDATE ${table} SET ${fields.map(field => `${field} = ?`).join(', ')}, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL${scope} RETURNING *`)
+        .bind(...values, now, id, body.version,...scopeArgs).first();
     }
     if (!record) throw new HttpError(409, 'Someone changed this item. Refresh the list and try again.');
     return jsonResponse(request.method === 'DELETE' ? { ok: true } : { item: publicRecord(record) });
@@ -116,7 +121,7 @@ export async function handleHousehold(request, env, member, resource, id) {
   return jsonResponse({ error: 'Method not allowed.' }, 405);
 }
 
-async function importGroceries(request, env, member) {
+async function importGroceries(request, env, member, householdId) {
   if (request.method !== 'POST') throw new HttpError(405, 'Method not allowed.');
   const body = await bodyJson(request);
   if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 100) throw new HttpError(400, 'Import 1–100 items at a time.');
@@ -125,8 +130,8 @@ async function importGroceries(request, env, member) {
     if (!item || typeof item !== 'object') throw new HttpError(400, 'Invalid imported item.');
     const legacyId = stringField(String(item.legacy_id ?? ''), 'Old item ID', 100);
     const values = resources.groceries.validate(item);
-    return env.DB.prepare('INSERT INTO grocery_items (id, name, quantity, done, created_by, created_at, updated_at, import_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(import_key) DO NOTHING')
-      .bind(crypto.randomUUID(), ...values, member.id, now, now, JSON.stringify([member.id, legacyId]));
+    return env.DB.prepare('INSERT INTO grocery_items (id, name, quantity, done, created_by, created_at, updated_at, import_key, household_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(import_key) DO NOTHING')
+      .bind(crypto.randomUUID(), ...values, member.id, now, now, JSON.stringify([member.id, legacyId]),householdId);
   });
   // D1 batch is transactional. Retries cannot duplicate or resurrect imported records.
   await env.DB.batch(statements);

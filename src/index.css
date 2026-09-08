@@ -231,3 +231,110 @@ select { width: 100%; min-width: 0; min-height: 48px; border: 1px solid #cbd5cd;
 .chat-message .byline { margin-top: 0; }
 #chat > .save-status:empty { display: none; }
 .chat-messages { margin-block: 8px; gap: 6px; }
+
+/* Compact portal layout; interactive controls keep 44px touch targets. */
+.page { padding: 16px 24px; max-width: 1400px; }
+.hero { padding: 0 0 12px; gap: 12px; flex-direction: row; align-items: center; }
+.hero h1 { font-size: 27px; gap: 8px; }
+.brand-icon { width: 34px; height: 34px; border-radius: 9px; }
+.brand-icon .line-icon { width: 22px; height: 22px; }
+.member-info { width: auto; flex-direction: row; gap: 8px; font-size: 12px; margin-left: auto; }
+.member-info a { display: inline-flex; align-items: center; min-height: 44px; padding: 6px; border: 0; background: transparent; font-size: 11px; }
+.section-nav { margin-bottom: 12px; padding-bottom: 10px; gap: 4px; }
+.card,.section-view .card { padding: 12px 14px; border-radius: 12px; }
+.section-header,.section-view .section-header { margin-bottom: 8px; }
+.section-header h2 { font-size: 18px; }
+.section-header p,.section-view .section-header p { font-size: 12px; margin-top: 2px; }
+h2 { font-size: 18px; } h3 { font-size: 15px; }
+.stack-form { gap: 8px; }
+.stack-form label,.inline-form label { font-size: 12px; gap: 3px; }
+button { min-height: 44px; padding: 8px 11px; }
+input:not([type=checkbox]),textarea,select { min-height: 44px; padding: 8px; }
+.save-status { margin: 4px 0; min-height: 0; font-size: 12px; }
+.save-status:empty { display: none; }
+.home-grid { gap: 8px; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.summary-card { padding: 10px 12px; gap: 3px; }
+.summary-card > .line-icon { display: none; }
+.summary-card h3 { font-size: 12px; }
+.summary-value { font-size: 15px; }
+.summary-card p { font-size: 13px; line-height: 1.35; }
+.summary-card > a { font-size: 12px; min-height: 44px; gap: 4px; }
+.family-notices { grid-column: 1 / -1; }
+.family-notices .notices-list { max-height: none; width: 100%; }
+.family-notices .byline { font-size: 11px; }
+.family-notices .home-notice { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 8px; align-items: center; width: 100%; }
+.home-notice .byline,.home-notice > strong { grid-column: 1 / -1; }
+.home-notice button { font-size: 11px; min-height: 44px; }
+.celebrations { margin: 10px 0; }
+.celebrations h2 { font-size: 14px; margin-bottom: 4px; }
+.celebrations h3 { font-size: 12px; margin-bottom: 2px; }
+.celebrations li,.celebrations a { font-size: 13px; }
+.celebration-today { padding: 6px 8px; margin-bottom: 4px; }
+.grocery-form { gap: 6px; margin-bottom: 6px; }
+.grocery-form > button { min-height: 44px; }
+.grocery-row { min-height: 44px; gap: 2px; }
+.grocery-row .grocery-check,.grocery-text,.icon-delete { min-height: 44px; }
+.grocery-text { font-size: 14px; padding-block: 6px; }
+.grocery-quantity { font-size: 12px; }
+.grocery-requester { font-size: 11px; max-width: 24%; }
+.grocery-hint { margin-bottom: 2px; font-size: 11px; }
+.sync-note,#groceries .sync-note { margin-top: 8px; padding-top: 4px; font-size: 11px; }
+.editor { padding: 8px; }
+.entries { gap: 8px; }
+.entry { padding: 8px 0; }
+.chat-message { padding: 6px 0; }
+.chat-message .prose { margin-top: 3px; }
+.chat-composer { padding-top: 6px; }
+.directory-toolbar { gap: 8px; margin-bottom: 8px; }
+.directory-layout { gap: 10px; }
+.person-select { padding: 6px 8px; min-height: 44px; }
+.person-select strong { font-size: 14px; }
+.person-select .muted { font-size: 11px; }
+.person-detail h2 { font-size: 17px; }
+.relationship-list li { padding: 6px 0; }
+.relationship-list .actions { gap: 4px; }
+.household-manager { margin-bottom: 8px; font-size: 12px; }
+.household-manager summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+.inline-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.inline-form label { display: grid; flex: 1; min-width: 140px; }
+.dinner-tonight { margin-bottom: 8px; }
+.dinner-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dinner-heading h2 { font-size: 15px; }
+.dinner-summary { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.dinner-summary > a { margin-left: auto; display: flex; align-items: center; min-height: 44px; font-size: 12px; }
+.dinner-summary button { font-size: 12px; }
+.household-help { font-size: 12px; }
+.dinner-week { max-width: 750px; margin-inline: auto; }
+.week-switch { display: flex; gap: 6px; margin: 8px 0; }
+.dinner-day { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 10px; min-height: 50px; border-top: 1px solid var(--border); font-size: 13px; }
+footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
+@media(max-width:700px) {
+  .page { padding: 10px 10px calc(78px + env(safe-area-inset-bottom,0px)); }
+  .hero { flex-direction: row; align-items: center; padding: 0 0 8px; gap: 6px; }
+  .hero h1 { font-size: 20px; gap: 6px; letter-spacing: -.04em; white-space: nowrap; }
+  .brand-icon { width: 28px; height: 28px; border-radius: 7px; }
+  .brand-icon .line-icon { width: 19px; height: 19px; }
+  .member-info { width: auto; flex-direction: column; gap: 0; align-items: flex-end; justify-content: center; font-size: 12px; }
+  .member-info a { min-height: 44px; padding: 0 2px; margin-top: -5px; }
+  .card,.section-view .card { padding: 10px; }
+  .home-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+  .summary-card { padding: 8px 10px; }
+  .summary-card > a { font-size: 11px; }
+  .grocery-row { min-height: 44px; }
+  .grocery-row .grocery-check { min-height: 44px; flex-basis: 38px; width: 38px; }
+  .grocery-text { font-size: 13px; }
+  .grocery-requester { font-size: 10px; }
+  .grocery-form > label:first-child { grid-column: 1; }
+  .app-nav { padding-top: 3px; }
+  .app-nav a { min-height: 52px; padding-block: 5px; }
+  .chat-messages { max-height: 36dvh; }
+  .directory-toolbar { gap: 6px; }
+  .directory-back { min-height: 44px; }
+}
+@media(display-mode:standalone) and (max-width:700px) {
+  .page { padding-top: max(10px,env(safe-area-inset-top,0px)); padding-left: max(10px,env(safe-area-inset-left,0px)); padding-right: max(10px,env(safe-area-inset-right,0px)); }
+}
+.summary-card { display: flex; }
+.celebrations { padding: 10px; border-radius: 12px; margin-block: 8px; }
+.celebrations h3 { margin: 0 0 2px; }
+.celebrations > a { margin-top: 0; }

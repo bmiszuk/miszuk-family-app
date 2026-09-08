@@ -31,7 +31,7 @@ function GroceryForm({ item, busy, onSave, onCancel, people, currentPersonId }) 
     {onCancel && <button type="button" className="quiet" onClick={onCancel} disabled={busy}>Cancel editing</button>}
   </form>;
 }
-export default function GroceryList({currentPersonId}) {
+export default function GroceryList({currentPersonId,householdName}) {
   const directory = useDirectory();
   const people = directory.data?.people || [];
   const names = displayNames(people);
@@ -42,7 +42,7 @@ export default function GroceryList({currentPersonId}) {
   const items = collection.items || [];
   const save = (item, changes) => action.run(() => api(`groceries/${item.id}`, { method: 'PATCH', body: { ...changes, version: item.version } }));
   return <section className="card" id="groceries" aria-label="Grocery List">
-    <SectionHeader icon="groceries" title="Grocery List" subtitle="One list for everyone at home." count={items.filter(item => !item.done).length} />
+    <SectionHeader icon="groceries" title="Grocery List" subtitle={householdName || 'Groceries'} count={items.filter(item => !item.done).length} />
     {legacy && <div className="import-box"><p>You have {legacy.items.length} items saved on this browser.</p><button disabled={action.busy} onClick={() => action.run(async () => {
       for (let start = 0; start < legacy.items.length; start += 100) await api('groceries/import', { method: 'POST', body: { items: legacy.items.slice(start, start + 100).map(item => ({ legacy_id: String(item.id), name: item.name, done: Boolean(item.done) })) } });
       try { localStorage.setItem(`${STORAGE_KEY}-imported`, legacy.saved); } catch { /* The shared import is already durable. */ }

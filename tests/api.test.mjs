@@ -12,6 +12,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0003_family_directory.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0004_chat_requester.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0005_login_identity.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0006_households_dinner.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -43,7 +44,7 @@ function fixture(t) {
 test('additive migration preserves existing family records', t => {
   const { db } = fixture(t);
   assert.equal(db.prepare('SELECT name FROM families WHERE id=?').get('existing').name, 'Existing family');
-  assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table'").get().n, 7);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table'").get().n, 9);
 });
 
 test('groceries persist across reads, edit by version, and soft-delete', async t => {
@@ -180,4 +181,39 @@ test('chat sender and Home notice update the same preserved news record', async 
   assert.equal(preserved.title,'Old headline');assert.equal(preserved.body,'Old news body');
   assert.equal((await request('/api/news','POST',{body:'Bad',home_notice:'yes'})).status,400);
   assert.equal((await request('/api/news','POST',{body:'Bad',sender_person_id:crypto.randomUUID()})).status,400);
+});
+
+test('households isolate groceries, ignore client scope, and preserve default items',async t=>{
+ const {request,db}=fixture(t);
+ const legacy=(await request('/api/groceries','POST',{name:'Default item'})).data.item;
+ const home=(await request('/api/households','POST',{name:'Other household'})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:'family@localhost',household_id:home.id})).data.item;
+ assert.equal((await request('/api/me')).data.member.household.id,home.id);
+ assert.equal((await request('/api/groceries')).data.items.length,0);
+ const created=(await request('/api/groceries','POST',{name:'Our item',household_id:legacy.household_id})).data.item;
+ assert.equal(created.household_id,home.id);
+ assert.equal((await request(`/api/groceries/${legacy.id}`,'PATCH',{version:1,name:'Oops'})).status,409);
+ assert.equal((await request(`/api/groceries/${legacy.id}`,'DELETE',{version:1})).status,409);
+ assert.equal(db.prepare('SELECT name FROM grocery_items WHERE id=?').get(legacy.id).name,'Default item');
+ await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
+ assert.equal((await request('/api/groceries')).data.items[0].id,legacy.id);
+});
+
+test('dinner validates household membership, versions, dates and clearing',async t=>{
+ const {request}=fixture(t);
+ assert.equal((await request('/api/dinner/2026-09-08','PUT',{person_id:null,version:0})).status,409);
+ const home=(await request('/api/households','POST',{name:'Dinner household'})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:'family@localhost',household_id:home.id})).data.item;
+ const other=(await request('/api/directory/people','POST',{first_name:'Other'})).data.item;
+ const body={person_id:person.id,version:0};
+ assert.equal((await request('/api/dinner/2026-09-08','PUT',body)).status,200);
+ assert.equal((await request('/api/dinner/2026-09-08','PUT',body)).status,409);
+ assert.equal((await request('/api/dinner/2026-09-09','PUT',{...body,person_id:other.id})).status,400);
+ assert.equal((await request('/api/dinner/2026-02-30','PUT',body)).status,400);
+ assert.equal((await request('/api/dinner?start=2026-09-07')).data.items[0].person_id,person.id);
+ assert.equal((await request('/api/dinner/2026-09-08','PUT',{person_id:null,version:1})).status,200);
+ assert.equal((await request('/api/dinner?start=2026-09-07')).data.items[0].person_id,null);
+ assert.equal((await request('/api/dinner?start=2026-09-14')).data.items.length,0);
+ await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
+ assert.equal((await request('/api/dinner?start=2026-09-07')).data.items.length,0);
 });

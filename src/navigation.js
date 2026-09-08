@@ -9,6 +9,7 @@ export const sections = [
 ];
 export function sectionFromHash(hash) {
   const id = hash === '#news' ? 'chat' : hash.replace(/^#/, '');
+  if (id === 'dinner') return 'dinner';
   return sections.some(section => section.id === id) ? id : 'home';
 }
 export function nextEvent(events, now = new Date()) {

@@ -1,3 +1,4 @@
+import Dinner from './Dinner.jsx';
 import FamilyNotices from './FamilyNotices.jsx';
 import { useCollection } from './useCollection.js';
 import { ErrorMessage } from './components/Shared.jsx';
@@ -7,7 +8,7 @@ import { nextEvent } from './navigation.js';
 import { useDirectory } from './useDirectory.js';
 import Celebrations from './Celebrations.jsx';
 
-export default function Home() {
+export default function Home({member}) {
   const directory = useDirectory();
   const groceries = useCollection('groceries');
   const events = useCollection('events');
@@ -15,8 +16,7 @@ export default function Home() {
   const event = nextEvent(events.items || []);
   const count = (groceries.items || []).filter(item => !item.done).length;
   return <section className="home-view" aria-label="Home">
-    <h2>A little closer to home</h2>
-    <p className="muted home-intro">Your family’s day, at a glance.</p>
+    <Dinner member={member} compact />
     <ErrorMessage error={directory.error} />
     <Celebrations directory={directory} compact />
     <div className="home-grid">

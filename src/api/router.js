@@ -1,3 +1,5 @@
+import {householdIdentity,handleHouseholds} from './households.js';
+import {handleDinner} from './dinner.js';
 import { handleFamilies } from './families.js';
 import { handlePeople } from './people.js';
 import { jsonResponse } from './utils.js';
@@ -9,9 +11,12 @@ export function createApiRouter() {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/me' && request.method === 'GET') {
-      const person = await env.DB.prepare('SELECT id, first_name, last_name FROM people WHERE lower(trim(login_email))=? AND deleted_at IS NULL').bind(member.email.trim().toLowerCase()).first();
-      return jsonResponse({ member: { ...member, person: person || null } });
+      return jsonResponse({member:await householdIdentity(env,member)});
     }
+    const householdRoute=url.pathname.match(/^\/api\/households(?:\/([^/]+))?$/);
+    if(householdRoute)return handleHouseholds(request,env,householdRoute[1]);
+    const dinner=url.pathname.match(/^\/api\/dinner(?:\/([^/]+))?$/);
+    if(dinner)return handleDinner(request,env,member,dinner[1]);
     const directory = url.pathname.match(/^\/api\/directory(?:\/(people|relationships)(?:\/([^/]+))?)?$/);
     if (directory) return handleDirectory(request, env, directory[1], directory[2]);
     const household = url.pathname.match(/^\/api\/(groceries|news|events)(?:\/([^/]+))?$/);

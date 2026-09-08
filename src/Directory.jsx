@@ -1,3 +1,5 @@
+import HouseholdManager from './HouseholdManager.jsx';
+import {useCollection} from './useCollection.js';
 import { useState } from 'react';
 import { api } from './client.js';
 import { useAction } from './useCollection.js';
@@ -20,15 +22,17 @@ function formDate(form, prefix) {
   if (!month && !day && !year) return '';
   return `${year ? `${year}-` : ''}${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
-function PersonForm({ person, busy, onSave, onCancel }) {
+function PersonForm({ person, busy, onSave, onCancel, households }) {
   return <form className="stack-form editor" onSubmit={event => {
     event.preventDefault(); const form = new FormData(event.currentTarget);
-    void onSave({ first_name: form.get('first_name'), last_name: form.get('last_name'), birth_date: formDate(form, 'birth'), login_email: form.get('login_email') });
+    void onSave({ first_name: form.get('first_name'), last_name: form.get('last_name'), birth_date: formDate(form, 'birth'), login_email: form.get('login_email'), household_id: form.get('household_id') || null });
   }}><h3>{person ? 'Edit person' : 'Add a person'}</h3>
     <fieldset disabled={busy} className="plain-fields">
       <label>First name<input name="first_name" required maxLength={100} defaultValue={person?.first_name || ''} /></label>
       <label>Last name<input name="last_name" maxLength={100} defaultValue={person?.last_name || ''} /></label>
       <label>Login email (optional)<input name="login_email" type="email" autoCapitalize="none" autoCorrect="off" maxLength={254} defaultValue={person?.login_email || ''} /></label>
+      <label>Household (optional)<select name="household_id" defaultValue={person?.household_id||''}><option value="">Not assigned</option>{households.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+      <p className="muted">Reload the app after changing your household.</p>
       <DateFields value={person?.birth_date} prefix="birth" title="Birthday" optional />
     </fieldset>
     <p className="muted">Leave the birthday blank if unknown. When entered, only month and day are needed. No login or email address is required.</p>
@@ -58,6 +62,7 @@ function MarriageForm({ relationship, busy, onSave, onCancel }) {
 }
 export default function Directory() {
   const directory = useDirectory();
+  const households = useCollection('households');
   const action = useAction(directory.refresh);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
@@ -70,9 +75,10 @@ export default function Directory() {
   const mutate = (path, method, body, notice) => action.run(() => api(`directory/${path}`, { method, body }), notice);
   return <section className="directory-view" aria-label="Family Directory">
     <SectionHeader icon="directory" title="Family Directory" subtitle="The people who make this family ours." count={people.length} />
+    <HouseholdManager collection={households} />
     <div className="directory-toolbar"><label>Find a person<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search first or last name" /></label><button disabled={Boolean(editor) || action.busy} onClick={() => setEditor({})}>Add person</button><button className="quiet" disabled={action.busy} onClick={directory.refresh}>Refresh directory</button></div>
     <ErrorMessage error={action.error || directory.error} /><p className="save-status" role="status">{action.busy ? 'Saving…' : action.notice}</p>
-    {editor && <PersonForm key={editor.id || 'new'} person={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
+    {editor && households.items && <PersonForm households={households.items || []} key={editor.id || 'new'} person={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
       if (await mutate(editor.id ? `people/${editor.id}` : 'people', editor.id ? 'PATCH' : 'POST', { ...values, ...(editor.id ? { version: editor.version } : {}) }, 'Person saved.')) setEditor(null);
     }} />}
     {!directory.data && !directory.error && <p role="status">Loading directory…</p>}

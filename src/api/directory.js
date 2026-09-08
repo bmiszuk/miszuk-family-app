@@ -42,12 +42,15 @@ async function directoryRequest(request, env, kind, id) {
     if (Object.hasOwn(body, 'login_email')) email = loginEmail(body.login_email);
     else if (id) email = (await db.prepare('SELECT login_email FROM people WHERE id=?').bind(id).first())?.login_email || null;
     values.push(email);
+    const householdId=Object.hasOwn(body,'household_id') ? body.household_id || null : id ? (await db.prepare('SELECT household_id FROM people WHERE id=?').bind(id).first())?.household_id || null : null;
+    if(householdId && (!isUuid(householdId)||!await db.prepare('SELECT id FROM households WHERE id=?').bind(householdId).first()))throw new HttpError(400,'Choose a valid household.');
+    values.push(householdId);
     if (request.method === 'POST') {
       const family = await db.prepare('SELECT id FROM families ORDER BY created_at, id LIMIT 1').first();
       if (!family) throw new HttpError(409, 'The family record is missing.');
-      record = await db.prepare('INSERT INTO people(id,family_id,first_name,last_name,birth_date,login_email,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?) RETURNING *').bind(crypto.randomUUID(), family.id, ...values, now, now).first();
+      record = await db.prepare('INSERT INTO people(id,family_id,first_name,last_name,birth_date,login_email,household_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *').bind(crypto.randomUUID(), family.id, ...values, now, now).first();
     } else {
-      record = await db.prepare('UPDATE people SET first_name=?,last_name=?,birth_date=?,login_email=?,updated_at=?,version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *').bind(...values, now, id, version(body)).first();
+      record = await db.prepare('UPDATE people SET first_name=?,last_name=?,birth_date=?,login_email=?,household_id=?,updated_at=?,version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *').bind(...values, now, id, version(body)).first();
     }
   } else if (request.method === 'POST') {
     if (!['spouse', 'parent'].includes(body.relationship_type)) throw new HttpError(400, 'Choose spouse or parent/child.');

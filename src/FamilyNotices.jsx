@@ -4,7 +4,7 @@ import {ErrorMessage} from './components/Shared.jsx';
 import {activeNotices,senderName,postedTime} from './familyDisplay.js';
 export default function FamilyNotices({collection,people}) {
   const action=useAction(collection.refresh);
-  const notices=activeNotices(collection.items || []);
+  const notices=activeNotices(collection.items || []).slice(-1);
   return <article className="card summary-card family-notices"><h3>Family Notices</h3>
     <ErrorMessage error={collection.error || action.error} /><p role="status" className="save-status">{action.notice}</p>
     {collection.items === null ? <p>Loading…</p> : !notices.length ? <p>No notices posted.</p> : <div className="notices-list">{notices.map(post=><div className="home-notice" key={post.id}>
