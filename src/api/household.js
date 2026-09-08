@@ -26,7 +26,7 @@ const resources = {
   },
   news: {
     table: 'news_posts', order: 'created_at DESC, id DESC', fields: ['title', 'body'],
-    validate(body) { return [stringField(body.title, 'Title', 160), stringField(body.body, 'News', 5000)]; },
+    validate(body) { return [stringField(body.title ?? 'Chat message', 'Title', 160), stringField(body.body, 'News', 5000)]; },
   },
   events: {
     table: 'household_events', order: 'start_at ASC, id ASC',
@@ -45,12 +45,23 @@ const resources = {
   },
 };
 
+async function extraValues(env, resource, body, current = {}) {
+  const field = resource === 'groceries' ? 'requester_person_id' : resource === 'news' ? 'sender_person_id' : null;
+  if (!field) return [];
+  const personId = body[field] || null;
+  if (personId && personId !== current[field]) {
+    if (!isUuid(personId) || !await env.DB.prepare('SELECT id FROM people WHERE id=? AND deleted_at IS NULL').bind(personId).first()) throw new HttpError(400, 'Choose a current directory person.');
+  }
+  return [personId, ...(resource === 'news' ? [boolField(body.home_notice ?? false, 'Post to Home screen')] : [])];
+}
+
 function publicRecord(record) {
   if (!record) return null;
   const result = { ...record };
   delete result.import_key;
   delete result.deleted_at;
   if ('done' in result) result.done = Boolean(result.done);
+  if ('home_notice' in result) result.home_notice = Boolean(result.home_notice);
   if ('all_day' in result) result.all_day = Boolean(result.all_day);
   return result;
 }
@@ -58,7 +69,10 @@ function publicRecord(record) {
 export async function handleHousehold(request, env, member, resource, id) {
   const config = resources[resource];
   if (!config) throw new HttpError(404, 'Not found.');
-  const { table, fields, order } = config; // Only hard-coded SQL identifiers, never user input.
+  const { table, order } = config;
+  const fields = [...config.fields];
+  if (resource === 'groceries') fields.push('requester_person_id');
+  if (resource === 'news') fields.push('sender_person_id', 'home_notice'); // Only hard-coded SQL identifiers, never user input.
   if (resource === 'groceries' && id === 'import') return importGroceries(request, env, member);
   if (id && !isUuid(id)) throw new HttpError(404, 'Not found.');
   if (request.method === 'GET' && !id) {
@@ -67,7 +81,7 @@ export async function handleHousehold(request, env, member, resource, id) {
   }
   if (request.method === 'POST' && !id) {
     const body = await bodyJson(request);
-    const values = config.validate(body);
+    const values = [...config.validate(body), ...await extraValues(env, resource, body)];
     const now = new Date().toISOString();
     const recordId = crypto.randomUUID();
     const names = ['id', ...fields, 'created_by', 'created_at', 'updated_at'];
@@ -85,7 +99,14 @@ export async function handleHousehold(request, env, member, resource, id) {
       record = await env.DB.prepare(`UPDATE ${table} SET deleted_at = ?, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL RETURNING *`)
         .bind(now, now, id, body.version).first();
     } else {
-      const values = config.validate(body);
+      const current = await env.DB.prepare(`SELECT * FROM ${table} WHERE id=? AND deleted_at IS NULL`).bind(id).first();
+      if (!current || current.version !== body.version) throw new HttpError(409, 'Someone changed this item. Refresh and try again.');
+      const merged = { ...current, ...body };
+      if (resource === 'groceries' && !Object.hasOwn(body, 'done')) merged.done = Boolean(current.done);
+      if (resource === 'events' && !Object.hasOwn(body, 'all_day')) merged.all_day = Boolean(current.all_day);
+      if (resource === 'news') merged.home_notice = Boolean(current.home_notice);
+      if (Object.hasOwn(body, 'home_notice')) merged.home_notice = body.home_notice;
+      const values = [...config.validate(merged), ...await extraValues(env, resource, merged, current)];
       record = await env.DB.prepare(`UPDATE ${table} SET ${fields.map(field => `${field} = ?`).join(', ')}, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL RETURNING *`)
         .bind(...values, now, id, body.version).first();
     }

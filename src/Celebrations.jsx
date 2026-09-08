@@ -1,7 +1,10 @@
+import { displayNames } from './familyDisplay.js';
 import { celebrations } from './directoryDates.js';
 export default function Celebrations({ directory, compact = false }) {
   if (!directory.data) return null;
-  const dates = celebrations(directory.data.people, directory.data.relationships, directory.now);
+  const names = displayNames(directory.data.people);
+  const people = compact ? directory.data.people.map(person => ({...person, first_name: names.get(person.id)})) : directory.data.people;
+  const dates = celebrations(people, directory.data.relationships, directory.now);
   const today = dates.filter(date => date.days === 0);
   const upcoming = dates.filter(date => date.days > 0);
   if (!dates.length) return compact ? null : <p className="muted">No birthdays or anniversaries in the next 30 days.</p>;

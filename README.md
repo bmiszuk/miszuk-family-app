@@ -121,3 +121,11 @@ In Safari, sign in at https://family.miszuk.com, open Share, choose Add to Home 
 The manifest uses credentials because Cloudflare Access protects this origin. This is an online-only install: no service worker, offline family-data cache, or authentication bypass is introduced. Access continues to control all requests. A valid session should load the portal; an expired session must complete email-PIN login. Safari/installed-app cookie sharing and the external Access redirect returning to standalone mode require physical-iPhone verification. Desktop device-size testing cannot verify the iOS installation sheet, Home Screen mask, standalone storage, or status/Home-indicator insets. No install banner or push notifications are included.
 
 Rollback before PWA changes: pre-pwa-2026-09-07 (1ab05d8). PWA changes require no D1 migration.
+
+## Chat, notices, and grocery requester
+
+Migration 0004_chat_requester.sql adds nullable directory-person references to groceries and news_posts, and a false-by-default home_notice flag. Existing news titles, bodies, authors and dates are retained. The UI calls the existing /api/news endpoint, sorts messages oldest first, and keeps old #news links working as Chat. The optional directory sender is a family label; the trusted authenticated author remains stored separately. Unpin uses a version-checked PATCH to the same message. Old clients omitting the new fields preserve existing assignments on updates.
+
+Home shows only explicitly pinned notices and short, disambiguated birthday/anniversary names. Directory names and dates are unchanged. Chat uses existing 15-second polling, with a bounded scroll area; it follows new messages only while the reader is at the bottom. No push notifications or real-time service was added.
+
+Rollback before these changes: pre-chat-requester-2026-09-07 (ad80325). The additive columns may remain when rolling back the app; old clients do not use them. A private production D1 export was taken before migration.

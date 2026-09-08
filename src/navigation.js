@@ -4,11 +4,11 @@ export const sections = [
   { id: 'home', label: 'Home', icon: 'home' },
   { id: 'groceries', label: 'Groceries', icon: 'groceries' },
   { id: 'calendar', label: 'Calendar', icon: 'calendar' },
-  { id: 'news', label: 'News', icon: 'news' },
+  { id: 'chat', label: 'Chat', icon: 'news' },
   { id: 'directory', label: 'Directory', icon: 'directory' },
 ];
 export function sectionFromHash(hash) {
-  const id = hash.replace(/^#/, '');
+  const id = hash === '#news' ? 'chat' : hash.replace(/^#/, '');
   return sections.some(section => section.id === id) ? id : 'home';
 }
 export function nextEvent(events, now = new Date()) {

@@ -1,3 +1,7 @@
+import { useDirectory } from './useDirectory.js';
+import { displayNames } from './familyDisplay.js';
+import PersonSelect from './components/PersonSelect.jsx';
+import { ErrorMessage } from './components/Shared.jsx';
 import { useState } from 'react';
 import { api } from './client.js';
 import { useAction, useCollection } from './useCollection.js';
@@ -13,19 +17,23 @@ function oldGroceries() {
     return valid.length ? { saved, items: valid } : null;
   } catch { return null; }
 }
-function GroceryForm({ item, busy, onSave, onCancel }) {
+function GroceryForm({ item, busy, onSave, onCancel, people }) {
   const [name, setName] = useState(item?.name || '');
+  const [requester, setRequester] = useState(item?.requester_person_id || '');
   const [quantity, setQuantity] = useState(item?.quantity || '');
   return <form className="stack-form grocery-form" onSubmit={async event => {
     event.preventDefault();
-    if (await onSave({ name: name.trim(), quantity: quantity.trim(), done: item?.done || false })) { setName(''); setQuantity(''); }
+    if (await onSave({ name: name.trim(), quantity: quantity.trim(), done: item?.done || false, requester_person_id: requester || null })) { setName(''); setQuantity(''); setRequester(''); }
   }}>
     <label>{item ? 'Item name' : 'What do we need?'}<input value={name} onChange={e => setName(e.target.value)} placeholder="Milk, apples, coffee…" maxLength={160} required disabled={busy} /></label>
-    <label>Quantity (optional)<input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="2 cartons" maxLength={80} disabled={busy} /></label><button type="submit" disabled={busy || !name.trim()}>{item ? 'Save item' : 'Add item'}</button>
+    <label>Quantity (optional)<input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="2 cartons" maxLength={80} disabled={busy} /></label><PersonSelect label="Requested by (optional)" people={people} value={requester} onChange={setRequester} disabled={busy} /><button type="submit" disabled={busy || !name.trim()}>{item ? 'Save item' : 'Add item'}</button>
     {onCancel && <button type="button" className="quiet" onClick={onCancel} disabled={busy}>Cancel editing</button>}
   </form>;
 }
 export default function GroceryList() {
+  const directory = useDirectory();
+  const people = directory.data?.people || [];
+  const names = displayNames(people);
   const collection = useCollection('groceries');
   const action = useAction(collection.refresh);
   const [editing, setEditing] = useState(null);
@@ -39,15 +47,16 @@ export default function GroceryList() {
       try { localStorage.setItem(`${STORAGE_KEY}-imported`, legacy.saved); } catch { /* The shared import is already durable. */ }
       setLegacy(null);
     }, 'Your browser list is now shared.')}>Import into shared list</button></div>}
-    <GroceryForm busy={action.busy} onSave={values => action.run(() => api('groceries', { method: 'POST', body: values }), 'Item added.')} />
+    <ErrorMessage error={directory.error} /><GroceryForm people={people} busy={action.busy} onSave={values => action.run(() => api('groceries', { method: 'POST', body: values }), 'Item added.')} />
     <CollectionStatus collection={collection} action={action} />
     {collection.items?.length === 0 && <p className="empty">The list is clear. Add the first thing you need.</p>}
     <p className="grocery-hint muted">Tap an item’s name to edit.</p>
     <ul className="grocery-items">{items.map(item => <li key={item.id} className={item.done ? 'grocery-item completed' : 'grocery-item'}>
-      {editing?.id === item.id ? <GroceryForm key={editing.id} item={editing} busy={action.busy} onCancel={() => setEditing(null)} onSave={async values => { const saved = await save(editing, values); if (saved) setEditing(null); return saved; }} /> : <>
+      {editing?.id === item.id ? <GroceryForm people={people} key={editing.id} item={editing} busy={action.busy} onCancel={() => setEditing(null)} onSave={async values => { const saved = await save(editing, values); if (saved) setEditing(null); return saved; }} /> : <>
         <div className="grocery-row">
           <label className="grocery-check"><input type="checkbox" aria-label={`Mark ${item.name} as ${item.done ? 'needed' : 'done'}`} checked={item.done} disabled={action.busy} onChange={() => save(item, { ...item, done: !item.done })} /></label>
           <button type="button" className="grocery-text" disabled={action.busy} onClick={() => setEditing(item)} aria-label={`Edit ${item.name}`}><strong>{item.name}</strong>{item.quantity && <span className="grocery-quantity"> — {item.quantity}</span>}</button>
+          {item.requester_person_id && <span className="grocery-requester" title={`Requested by ${names.get(item.requester_person_id) || 'Removed person'}`}>{names.get(item.requester_person_id) || 'Removed person'}</span>}
           <DeleteButton compact label={item.name} disabled={action.busy} onDelete={() => action.run(() => api(`groceries/${item.id}`, { method: 'DELETE', body: { version: item.version } }), 'Item removed.')} />
         </div>
       </>}

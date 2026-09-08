@@ -42,7 +42,7 @@ export default function App() {
         {section === 'directory' && <Directory />}
         <div className="section-view" hidden={section !== 'groceries'}><GroceryList /></div>
         <div className="section-view" hidden={section !== 'calendar'}><Calendar /></div>
-        <div className="section-view" hidden={section !== 'news'}><FamilyNews /></div>
+        <div className="section-view" hidden={section !== 'chat'}><FamilyNews /></div>
       </>}
     </main>
     <footer>Our home, a little more connected.</footer>

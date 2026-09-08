@@ -10,6 +10,7 @@ function fixture(t) {
   db.exec("INSERT INTO families(id,name) VALUES('existing','Existing family')");
   db.exec(readFileSync(new URL('../migrations/0002_household_portal.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0003_family_directory.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0004_chat_requester.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {

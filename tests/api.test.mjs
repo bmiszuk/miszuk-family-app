@@ -9,6 +9,8 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0001_initial_schema.sql', import.meta.url), 'utf8'));
   db.exec("INSERT INTO families(id,name) VALUES('existing','Existing family')");
   db.exec(readFileSync(new URL('../migrations/0002_household_portal.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0003_family_directory.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0004_chat_requester.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -147,4 +149,34 @@ test('unknown endpoints and methods return predictable status codes', async t =>
   assert.equal((await request('/api/unknown')).status, 404);
   assert.equal((await request('/api/groceries/not-an-id', 'DELETE', { version: 1 })).status, 404);
   assert.equal((await request('/api/news', 'PUT', {})).status, 405);
+});
+
+test('requester references support add/edit/null and preserve legacy client updates', async t => {
+  const {request}=fixture(t);
+  const person=(await request('/api/directory/people','POST',{first_name:'Requester',birth_date:null})).data.item;
+  const item=(await request('/api/groceries','POST',{name:'Milk',requester_person_id:person.id})).data.item;
+  assert.equal(item.requester_person_id,person.id);
+  const changed=await request(`/api/groceries/${item.id}`,'PATCH',{name:'Milk',quantity:'2 gallons',done:true,version:1});
+  assert.equal(changed.data.item.requester_person_id,person.id);
+  const cleared=await request(`/api/groceries/${item.id}`,'PATCH',{version:2,requester_person_id:null});
+  assert.equal(cleared.data.item.requester_person_id,null);
+  assert.equal((await request('/api/groceries','POST',{name:'Other'})).data.item.requester_person_id,null);
+  assert.equal((await request('/api/groceries','POST',{name:'Bad',requester_person_id:crypto.randomUUID()})).status,400);
+});
+
+test('chat sender and Home notice update the same preserved news record', async t => {
+  const {request,db}=fixture(t);
+  const person=(await request('/api/directory/people','POST',{first_name:'Sender',birth_date:null})).data.item;
+  const legacy=(await request('/api/news','POST',{title:'Old headline',body:'Old news body'})).data.item;
+  assert.equal(legacy.home_notice,false);assert.equal(legacy.sender_person_id,null);
+  const post=(await request('/api/news','POST',{body:'Come to dinner',sender_person_id:person.id,home_notice:true})).data.item;
+  assert.equal(post.sender_person_id,person.id);assert.equal(post.home_notice,true);
+  const unpinned=await request(`/api/news/${post.id}`,'PATCH',{version:1,home_notice:false});
+  assert.equal(unpinned.status,200);assert.equal(unpinned.data.item.body,post.body);assert.equal(unpinned.data.item.sender_person_id,person.id);assert.equal(unpinned.data.item.home_notice,false);
+  assert.equal((await request(`/api/news/${post.id}`,'PATCH',{version:1,home_notice:true})).status,409);
+  assert.equal(db.prepare('SELECT count(*) n FROM news_posts WHERE deleted_at IS NULL').get().n,2);
+  const preserved=(await request('/api/news')).data.items.find(x=>x.id===legacy.id);
+  assert.equal(preserved.title,'Old headline');assert.equal(preserved.body,'Old news body');
+  assert.equal((await request('/api/news','POST',{body:'Bad',home_notice:'yes'})).status,400);
+  assert.equal((await request('/api/news','POST',{body:'Bad',sender_person_id:crypto.randomUUID()})).status,400);
 });
