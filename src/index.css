@@ -360,3 +360,12 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 .person-detail .relationship-list { margin: 0; }
 .person-detail .relationship-list > li { padding: 4px 0; }
 .person-detail .relationship-list p { margin: 0; line-height: 1.45; }
+
+.agenda-toolbar { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:12px; margin-bottom:10px; }
+.agenda-group { margin-top:14px; }
+.agenda-group h3 { font-size:14px; margin:0 0 4px; }
+.agenda-list,.home-calendar-list { list-style:none; padding:0; margin:0; }
+.agenda-list li { border-top:1px solid var(--border); padding:7px 0; overflow-wrap:anywhere; }
+.agenda-list p { margin:0; font-size:12px; }
+.home-calendar-list li { display:grid; gap:2px; padding:5px 0; border-bottom:1px solid var(--border); }
+.home-calendar-list .muted { font-size:11px; }

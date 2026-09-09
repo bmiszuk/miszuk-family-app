@@ -9,6 +9,7 @@ import { migrationStatements } from './migration-statements.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dist = resolve(root, 'dist');
+const sample = process.argv.includes('--cozi-sample') ? await readFile(resolve(root,'tests/fixtures/cozi-sample.ics'),'utf8') : null;
 await readFile(resolve(dist, 'index.html')); // Run npm run build first.
 const result = await build({ configFile: false, root, logLevel: 'silent', build: { write: false, lib: { entry: resolve(root, 'worker.js'), formats: ['es'], fileName: 'worker' }, minify: false } });
 const output = Array.isArray(result) ? result[0] : result;
@@ -16,7 +17,8 @@ const script = output.output.find(chunk => chunk.type === 'chunk' && chunk.isEnt
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const mf = new Miniflare({
   modules: true, script, host: '127.0.0.1', port: 5173, compatibilityDate: '2026-07-05',
-  bindings: { LOCAL_DEV: 'true' }, d1Databases: ['DB'], d1Persist: resolve(root, '.wrangler/portable-state'),
+  bindings: { LOCAL_DEV: 'true', ...(sample ? {COZI_CALENDAR_URL:'https://rest.cozi.com/local-sample-only'} : {}) },
+  ...(sample ? {outboundService: async()=>new Response(sample,{headers:{'Content-Type':'text/calendar'}})} : {}), d1Databases: ['DB'], d1Persist: resolve(root, '.wrangler/portable-state'),
   serviceBindings: { ASSETS: async request => {
     let path;
     try { path = decodeURIComponent(new URL(request.url).pathname); } catch { return new Response('Invalid path', { status: 400 }); }
@@ -35,6 +37,7 @@ try {
     await db.batch([...migrationStatements(sql).map(value => db.prepare(value)), db.prepare('INSERT INTO preview_migrations(name) VALUES(?)').bind(name)]);
   }
   console.log(`Family preview: ${await mf.ready}`);
+  if(sample) console.log('Cozi uses the synthetic September 2026 test feed; no remote calendar is contacted.');
   console.log('Local data only. Ctrl+C to stop. Rebuild and restart after source changes.');
   let stopping = false;
   const stop = async () => { if (stopping) return; stopping = true; await mf.dispose(); };

@@ -9,7 +9,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const result = await build({ configFile: false, logLevel: 'silent', build: { write: false, lib: { entry: 'worker.js', formats: ['es'], fileName: 'worker' }, minify: false } });
   const output = Array.isArray(result) ? result[0] : result;
   const script = output.output.find(chunk => chunk.type === 'chunk' && chunk.isEntry).code;
-  const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true' }, d1Databases: ['DB'] });
+  const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true', COZI_CALENDAR_URL:'https://rest.cozi.com/synthetic-private-feed' }, outboundService: async()=>new Response(readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8')), d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
     for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql']) {
@@ -21,6 +21,11 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
       return { status: response.status, data: await response.json() };
     }
     assert.equal((await call('me')).status, 200);
+    const cozi=await call('cozi-calendar');
+    assert.equal(cozi.status,200,JSON.stringify(cozi.data));
+    assert.ok(Array.isArray(cozi.data.items));
+    assert.ok(!JSON.stringify(cozi.data).includes('synthetic-private-feed'));
+    assert.equal((await call('cozi-calendar','POST',{})).status,405);
     const { data: { item } } = await call('groceries', 'POST', { name: 'Runtime test', quantity: '2' });
     assert.ok(item.id);
     assert.equal((await call('groceries')).data.items[0].name, 'Runtime test');

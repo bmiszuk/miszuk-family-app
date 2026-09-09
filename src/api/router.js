@@ -1,3 +1,4 @@
+import {handleCozi} from './cozi.js';
 import {householdIdentity,handleHouseholds} from './households.js';
 import {handleDinner} from './dinner.js';
 import { handleFamilies } from './families.js';
@@ -13,6 +14,7 @@ export function createApiRouter() {
     if (url.pathname === '/api/me' && request.method === 'GET') {
       return jsonResponse({member:await householdIdentity(env,member)});
     }
+    if(url.pathname === '/api/cozi-calendar') return handleCozi(request,env);
     const householdRoute=url.pathname.match(/^\/api\/households(?:\/([^/]+))?$/);
     if(householdRoute)return handleHouseholds(request,env,householdRoute[1]);
     const dinner=url.pathname.match(/^\/api\/dinner(?:\/([^/]+))?$/);

@@ -18,6 +18,8 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260701.1",
+    "@js-temporal/polyfill": "^0.5.1",
+    "ical.js": "^2.2.1",
     "jose": "^6.2.12",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

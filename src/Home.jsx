@@ -4,17 +4,16 @@ import FamilyNotices from './FamilyNotices.jsx';
 import { useCollection } from './useCollection.js';
 import { ErrorMessage } from './components/Shared.jsx';
 import Icon from './components/Icon.jsx';
-import { eventDateLabel } from './calendar.js';
-import { nextEvent } from './navigation.js';
+import {upcomingCoziEvents,coziDateLabel} from './coziCalendar.js';
 import { useDirectory } from './useDirectory.js';
 import Celebrations from './Celebrations.jsx';
 
 export default function Home({member}) {
   const directory = useDirectory();
   const groceries = useCollection('groceries');
-  const events = useCollection('events');
+  const events = useCollection('cozi-calendar');
   const news = useCollection('news');
-  const event = nextEvent(events.items || []);
+  const upcoming = upcomingCoziEvents(events.items || [],new Date(),3);
   const count = (groceries.items || []).filter(item => !item.done).length;
   return <section className="home-view" aria-label="Home">
     <Dinner member={member} compact />
@@ -28,7 +27,7 @@ export default function Home({member}) {
       </article>
       <article className="card summary-card"><Icon name="calendar" /><h3>Next on the calendar</h3>
         <ErrorMessage error={events.error} />
-        {!events.error && (events.items === null ? <p>Loading…</p> : event ? <><p className="summary-value summary-clamp">{event.title}</p><p className="muted">{eventDateLabel(event)}</p></> : <p>Nothing coming up yet.</p>)}
+        {!events.error && (events.items === null ? <p>Loading…</p> : upcoming.length ? <ul className="home-calendar-list">{upcoming.map(event=><li key={event.id}><strong>{event.title}</strong><span className="muted">{coziDateLabel(event)}</span></li>)}</ul> : <p>Nothing coming up yet.</p>)}
         <a href="#calendar">Open calendar <span aria-hidden="true">→</span></a>
       </article>
       <FamilyNotices currentPersonId={member.person?.id} collection={news} people={directory.data?.people || []} />
