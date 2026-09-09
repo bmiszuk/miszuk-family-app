@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {parseCoziFeed} from '../src/api/coziFeed.js';
 import {createCoziHandler} from '../src/api/cozi.js';
-import {upcomingCoziEvents,coziAgenda,coziDateLabel} from '../src/coziCalendar.js';
+import {upcomingCoziEvents,coziAgenda,coziDateLabel,coziTimeLabel} from '../src/coziCalendar.js';
 const sample=readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8');
 const now=new Date('2026-09-09T17:00:00Z');
 const wrap=events=>'BEGIN:VCALENDAR\nVERSION:2.0\n'+events+'\nEND:VCALENDAR';
@@ -41,7 +41,7 @@ test('Home selection and agenda use Chicago today and exclusive all-day ends',as
  assert.equal(upcomingCoziEvents([items[2]],new Date('2026-09-14T04:59:00Z')).length,1);
  assert.equal(upcomingCoziEvents([items[2]],new Date('2026-09-14T05:00:00Z')).length,0);
  const boundary=await parseCoziFeed(wrap(event('UID:newyear\nDTSTART;VALUE=DATE:20270101\nSUMMARY:New year')),{now:new Date('2026-12-31T20:00:00Z')});
- assert.equal(coziAgenda(boundary,new Date('2027-01-01T01:00:00Z'))[1].items.length,1);
+ assert.equal(coziAgenda(boundary,new Date('2027-01-01T01:00:00Z'))[0].title,'Tomorrow · Fri, Jan 1');
 });
 test('unknown timezone or malformed feeds fail safely rather than showing incorrect dates',async()=>{
  await assert.rejects(parseCoziFeed('<html>Oops</html>',{now}));
@@ -96,4 +96,16 @@ test('Cozi date-only fields without VALUE=DATE remain all-day and recur correctl
  const items=await parseCoziFeed(source,{now});
  assert.deepEqual(items.map(e=>[e.start_at,e.end_at,e.all_day]),[['2026-09-09','2026-09-10',true],['2026-09-11','2026-09-12',true]]);
  assert.equal(upcomingCoziEvents(items,now).length,2);
+});
+
+test('day groups and compact times preserve titles and structured Chicago scheduling',()=>{
+ const items=[{id:'a',title:'Bob/Stephanie: Date night at 8',start_at:'2026-09-10T23:00:00Z',end_at:'2026-09-11T00:00:00Z'}, {id:'b',title:'All: Work',all_day:true,start_at:'2026-09-09',end_at:'2026-09-10'}];
+ const groups=coziAgenda(items,now);
+ assert.deepEqual(groups.map(g=>g.title),['Today · Wed, Sep 9','Tomorrow · Thu, Sep 10']);
+ assert.equal(groups[1].items[0].title,items[0].title);
+ assert.equal(coziTimeLabel(items[0]),'6:00 PM–7:00 PM');
+ assert.equal(coziTimeLabel(items[1]),'All day');
+ assert.equal(coziAgenda([],now).length,0);
+ assert.match(coziTimeLabel({...items[1],end_at:'2026-09-12'}),/through Fri, Sep 11/);
+ assert.equal(coziAgenda([{...items[1],start_at:'2026-09-08'}],now)[0].day,'2026-09-09');
 });

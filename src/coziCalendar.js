@@ -7,13 +7,32 @@ export function upcomingCoziEvents(events,now=new Date(),limit=Infinity) {
  return events.filter(e=>e.all_day?(e.end_at||e.start_at)>today:(Date.parse(e.end_at||e.start_at)>=now.getTime()))
    .sort((a,b)=>coziEventDay(a).localeCompare(coziEventDay(b))||Number(b.all_day)-Number(a.all_day)||a.start_at.localeCompare(b.start_at)||a.title.localeCompare(b.title)).slice(0,limit);
 }
+const dayLabel=day=>new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
 export function coziAgenda(events,now=new Date()) {
- const today=chicagoDate(now),date=new Date(today+'T12:00:00Z');
- date.setUTCDate(date.getUTCDate()+((8-date.getUTCDay())%7||7));
- const nextWeek=date.toISOString().slice(0,10);
- const groups=[{title:'Today',items:[]},{title:'This week',items:[]},{title:'Upcoming',items:[]}];
- for(const event of upcomingCoziEvents(events,now)) {const day=coziEventDay(event);groups[day<=today?0:day<nextWeek?1:2].items.push(event);}
+ const today=chicagoDate(now),tomorrow=new Date(today+'T12:00:00Z');
+ tomorrow.setUTCDate(tomorrow.getUTCDate()+1);
+ const nextDay=tomorrow.toISOString().slice(0,10),groups=[];
+ for(const event of upcomingCoziEvents(events,now)) {
+  const day=coziEventDay(event)<today?today:coziEventDay(event);
+  let group=groups.at(-1);
+  if(group?.day!==day) {
+   const relative=day===today?'Today':day===nextDay?'Tomorrow':'';
+   group={day,title:(relative?relative+' · ':'')+dayLabel(day),shortTitle:relative||dayLabel(day),items:[]};
+   groups.push(group);
+  }
+  group.items.push(event);
+ }
  return groups;
+}
+export function coziTimeLabel(event) {
+ if(event.all_day) {
+  const end=new Date((event.end_at||event.start_at)+'T12:00:00Z');end.setUTCDate(end.getUTCDate()-1);
+  const last=end.toISOString().slice(0,10);
+  return 'All day'+(last>event.start_at?' · through '+dayLabel(last):'');
+ }
+ const time=value=>new Date(value).toLocaleTimeString('en-US',{timeZone,hour:'numeric',minute:'2-digit'});
+ const end=event.end_at&&event.end_at!==event.start_at?event.end_at:null;
+ return time(event.start_at)+(end?'–'+(chicagoDate(new Date(end))!==coziEventDay(event)?dayLabel(chicagoDate(new Date(end)))+' ':'')+time(end):'');
 }
 export function coziDateLabel(event) {
  const day=value=>new Date(value+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
