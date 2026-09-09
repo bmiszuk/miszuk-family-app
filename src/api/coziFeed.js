@@ -30,7 +30,9 @@ function timezones(calendar) {
 
 export async function parseCoziFeed(source,{now=new Date(),days=90}={}) {
   if(!/^BEGIN:VCALENDAR\s*$/mi.test(source)||!/^END:VCALENDAR\s*$/mi.test(source))throw new Error('Invalid calendar');
-  const calendar=new ICAL.Component(ICAL.parse(source));
+  // Cozi can omit VALUE=DATE on all-day fields. Repair only exact date-only values.
+  const compatible=source.replace(/^(DTSTART|DTEND|RECURRENCE-ID|RDATE|EXDATE)((?:;[^:\r\n]*)?):(\d{8}(?:,\d{8})*)\r?$/gm,(line,name,parameters,dates)=>/;VALUE=/i.test(parameters)?line:name+parameters+';VALUE=DATE:'+dates);
+  const calendar=new ICAL.Component(ICAL.parse(compatible));
   if(calendar.name!=='vcalendar')throw new Error('Invalid calendar');
   timezones(calendar);
   const today=Temporal.Instant.from(now.toISOString()).toZonedDateTimeISO(ZONE).toPlainDate();

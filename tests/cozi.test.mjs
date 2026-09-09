@@ -90,3 +90,10 @@ test('embedded VTIMEZONE rules and UTC UNTIL constrain recurrence accurately',as
  const items=await parseCoziFeed(wrap(zone+'\n'+event('UID:embedded\nDTSTART;TZID=Test/Fixed:20260909T090000\nDTEND;TZID=Test/Fixed:20260909T100000\nRRULE:FREQ=DAILY;UNTIL=20260910T150000Z')),{now});
  assert.equal(items.length,2);assert.equal(items[1].start_at,'2026-09-10T15:00:00.000Z');
 });
+
+test('Cozi date-only fields without VALUE=DATE remain all-day and recur correctly',async()=>{
+ const source=wrap(event('UID:cozi-allday\nDTSTART:20260909\nDTEND:20260910\nRRULE:FREQ=DAILY;COUNT=3\nEXDATE:20260910\nSUMMARY:All day'));
+ const items=await parseCoziFeed(source,{now});
+ assert.deepEqual(items.map(e=>[e.start_at,e.end_at,e.all_day]),[['2026-09-09','2026-09-10',true],['2026-09-11','2026-09-12',true]]);
+ assert.equal(upcomingCoziEvents(items,now).length,2);
+});
