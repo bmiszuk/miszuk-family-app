@@ -13,6 +13,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0004_chat_requester.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0005_login_identity.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0006_households_dinner.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -96,6 +97,7 @@ test('invalid import is rejected without inserting a partial list', async t => {
 
 test('news can be created, edited, and removed, with a trusted author', async t => {
   const { request } = fixture(t);
+  await request('/api/directory/people','POST',{first_name:'Author',login_email:'family@localhost'});
   const { data: { item } } = await request('/api/news', 'POST', { title: 'Dinner', body: 'Sunday at home.', author_name: 'Spoofed' });
   assert.equal(item.author_name, 'Local family member');
   assert.equal((await request('/api/news')).data.items.length, 1);
@@ -132,6 +134,7 @@ test('calendar rejects impossible dates, wrong types, bad timezone and reversed 
 test('validation rejects empty names, oversized content, wrong content type, and cross-origin writes', async t => {
   const { request } = fixture(t);
   for (const body of [{ name: ' ' }, { name: 2 }, { name: 'x'.repeat(161) }, { name: 'Tea', quantity: 3 }, { name: 'Tea', done: 'true' }]) assert.equal((await request('/api/groceries', 'POST', body)).status, 400);
+  await request('/api/directory/people','POST',{first_name:'Author',login_email:'family@localhost'});
   assert.equal((await request('/api/news', 'POST', { title: 'x', body: 'x'.repeat(70000) })).status, 413);
   assert.equal((await request('/api/groceries', 'POST', { name: 'Tea' }, { headers: { 'Content-Type': 'text/plain' } })).status, 415);
   assert.equal((await request('/api/groceries', 'POST', { name: 'Tea' }, { headers: { Origin: 'https://evil.example' } })).status, 403);
@@ -168,9 +171,9 @@ test('requester references support add/edit/null and preserve legacy client upda
 
 test('chat sender and Home notice update the same preserved news record', async t => {
   const {request,db}=fixture(t);
-  const person=(await request('/api/directory/people','POST',{first_name:'Sender',birth_date:null})).data.item;
+  const person=(await request('/api/directory/people','POST',{first_name:'Sender',birth_date:null,login_email:'family@localhost'})).data.item;
   const legacy=(await request('/api/news','POST',{title:'Old headline',body:'Old news body'})).data.item;
-  assert.equal(legacy.home_notice,false);assert.equal(legacy.sender_person_id,null);
+  assert.equal(legacy.home_notice,false);assert.equal(legacy.sender_person_id,person.id);
   const post=(await request('/api/news','POST',{body:'Come to dinner',sender_person_id:person.id,home_notice:true})).data.item;
   assert.equal(post.sender_person_id,person.id);assert.equal(post.home_notice,true);
   const unpinned=await request(`/api/news/${post.id}`,'PATCH',{version:1,home_notice:false});
@@ -180,7 +183,7 @@ test('chat sender and Home notice update the same preserved news record', async 
   const preserved=(await request('/api/news')).data.items.find(x=>x.id===legacy.id);
   assert.equal(preserved.title,'Old headline');assert.equal(preserved.body,'Old news body');
   assert.equal((await request('/api/news','POST',{body:'Bad',home_notice:'yes'})).status,400);
-  assert.equal((await request('/api/news','POST',{body:'Bad',sender_person_id:crypto.randomUUID()})).status,400);
+  assert.equal((await request('/api/news','POST',{body:'Bad',sender_person_id:crypto.randomUUID()})).data.item.sender_person_id,person.id);
 });
 
 test('households isolate groceries, ignore client scope, and preserve default items',async t=>{
@@ -216,4 +219,50 @@ test('dinner validates household membership, versions, dates and clearing',async
  assert.equal((await request('/api/dinner?start=2026-09-14')).data.items.length,0);
  await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
  assert.equal((await request('/api/dinner?start=2026-09-07')).data.items.length,0);
+});
+
+test('chat uses trusted mapped sender and restricts ownership',async t=>{
+ const {request,db}=fixture(t);
+ assert.equal((await request('/api/news','POST',{body:'Denied',sender_person_id:crypto.randomUUID()})).status,403);
+ const a=(await request('/api/directory/people','POST',{first_name:'A',login_email:'family@localhost'})).data.item;
+ const b=(await request('/api/directory/people','POST',{first_name:'B'})).data.item;
+ const post=(await request('/api/news','POST',{body:'Owned',sender_person_id:b.id,home_notice:true})).data.item;
+ assert.equal(post.sender_person_id,a.id);
+ const edited=await request(`/api/news/${post.id}`,'PATCH',{version:1,body:'Edited',sender_person_id:b.id});
+ assert.equal(edited.data.item.sender_person_id,a.id);
+ db.prepare('UPDATE people SET login_email=NULL WHERE id=?').run(a.id);
+ db.prepare("UPDATE people SET login_email='family@localhost' WHERE id=?").run(b.id);
+ for(const method of ['PATCH','DELETE'])assert.equal((await request(`/api/news/${post.id}`,method,{version:2,body:'Denied',home_notice:false})).status,403);
+ assert.equal((await request('/api/news')).data.items[0].home_notice,true);
+});
+
+test('Delete checked is household-scoped and soft-deletes only checked items',async t=>{
+ const {request,db}=fixture(t);
+ const keep=(await request('/api/groceries','POST',{name:'Needed'})).data.item;
+ const checked=(await request('/api/groceries','POST',{name:'Checked',done:true})).data.item;
+ const h=(await request('/api/households','POST',{name:'Other'})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:'family@localhost',household_id:h.id})).data.item;
+ const other=(await request('/api/groceries','POST',{name:'Other checked',done:true})).data.item;
+ await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
+ assert.equal((await request('/api/groceries/checked','DELETE')).status,200);
+ assert.deepEqual((await request('/api/groceries')).data.items.map(x=>x.id),[keep.id]);
+ assert.ok(db.prepare('SELECT deleted_at FROM grocery_items WHERE id=?').get(checked.id).deleted_at);
+ assert.equal(db.prepare('SELECT deleted_at FROM grocery_items WHERE id=?').get(other.id).deleted_at,null);
+ assert.equal((await request('/api/groceries/checked','DELETE')).status,200);
+});
+
+test('empty household retirement preserves data and assigned households are protected',async t=>{
+ const {request,db}=fixture(t);
+ const home=(await request('/api/households','POST',{name:'Retire me'})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Member',login_email:'family@localhost',household_id:home.id})).data.item;
+ const grocery=(await request('/api/groceries','POST',{name:'Keep stored'})).data.item;
+ assert.equal((await request(`/api/households/${home.id}`,'DELETE')).status,409);
+ await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
+ assert.equal((await request(`/api/households/${home.id}`,'DELETE')).status,200);
+ assert.ok(db.prepare('SELECT deleted_at FROM households WHERE id=?').get(home.id).deleted_at);
+ assert.equal(db.prepare('SELECT name FROM grocery_items WHERE id=?').get(grocery.id).name,'Keep stored');
+ assert.equal((await request('/api/households')).data.items.some(h=>h.id===home.id),false);
+ assert.equal((await request('/api/directory/people','POST',{first_name:'Bad household',household_id:home.id})).status,400);
+ const fallback=(await request('/api/me')).data.member.household;
+ assert.equal((await request(`/api/households/${fallback.id}`,'DELETE')).status,409);
 });

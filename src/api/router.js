@@ -18,7 +18,7 @@ export function createApiRouter() {
     const dinner=url.pathname.match(/^\/api\/dinner(?:\/([^/]+))?$/);
     if(dinner)return handleDinner(request,env,member,dinner[1]);
     const directory = url.pathname.match(/^\/api\/directory(?:\/(people|relationships)(?:\/([^/]+))?)?$/);
-    if (directory) return handleDirectory(request, env, directory[1], directory[2]);
+    if (directory) return handleDirectory(request, env, directory[1], directory[2], member);
     const household = url.pathname.match(/^\/api\/(groceries|news|events)(?:\/([^/]+))?$/);
     if (household) return handleHousehold(request, env, member, household[1], household[2]);
 

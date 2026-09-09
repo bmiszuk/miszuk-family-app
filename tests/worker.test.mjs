@@ -12,7 +12,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true' }, d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
       await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }
@@ -30,6 +30,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     assert.equal((await call('groceries/import', 'POST', imported)).status, 200);
     assert.equal((await call('groceries/import', 'POST', imported)).status, 200);
     assert.equal((await call('groceries')).data.items.length, 2);
+    const actor=(await call('directory/people','POST',{first_name:'Actor',login_email:'family@localhost'})).data.item;
     assert.equal((await call('news', 'POST', { title: 'Hello', body: 'Shared from the runtime.' })).status, 201);
     assert.equal((await call('events', 'POST', { title: 'Holiday', all_day: true, start_at: '2026-12-25', timezone: 'America/Chicago' })).status, 201);
     assert.equal((await call('news')).data.items.length, 1);
@@ -37,6 +38,8 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     const p = (await call('directory/people', 'POST', { first_name: 'Alex', last_name: 'Family', birth_date: '12-31' })).data.item;
     const q = (await call('directory/people', 'POST', { first_name: 'Sam', last_name: 'Family', birth_date: '1990-01-01' })).data.item;
     assert.ok(p.id); assert.ok(q.id);
+    await db.prepare('UPDATE people SET login_email=NULL WHERE id=?').bind(actor.id).run();
+    await db.prepare("UPDATE people SET login_email='family@localhost' WHERE id=?").bind(p.id).run();
     const marriage = (await call('directory/relationships', 'POST', { person1_id: p.id, person2_id: q.id, relationship_type: 'spouse', anniversary_date: '06-20' })).data.item;
     assert.ok(marriage.id);
     assert.equal((await call('directory/relationships', 'POST', { person1_id: q.id, person2_id: p.id, relationship_type: 'spouse' })).status, 409);

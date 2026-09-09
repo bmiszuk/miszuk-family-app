@@ -78,6 +78,13 @@ export async function handleHousehold(request, env, member, resource, id) {
   const scope=resource==='groceries' ? ' AND household_id=?' : '';
   const scopeArgs=householdId ? [householdId] : [];
   if (resource === 'groceries' && id === 'import') return importGroceries(request, env, member,householdId);
+  if (resource === 'groceries' && id === 'checked' && request.method === 'DELETE') {
+    const now = new Date().toISOString();
+    await env.DB.prepare('UPDATE grocery_items SET deleted_at=?,updated_at=?,version=version+1 WHERE household_id=? AND done=1 AND deleted_at IS NULL').bind(now,now,householdId).run();
+    return jsonResponse({ok:true});
+  }
+  const actor = resource === 'news' && ['POST','PATCH','DELETE'].includes(request.method) ? (await householdIdentity(env,member)).person : null;
+  if (resource === 'news' && ['POST','PATCH','DELETE'].includes(request.method) && !actor) throw new HttpError(403,'Add your login email to your Directory entry before posting.');
   if (id && !isUuid(id)) throw new HttpError(404, 'Not found.');
   if (request.method === 'GET' && !id) {
     const { results } = await env.DB.prepare(`SELECT * FROM ${table} WHERE deleted_at IS NULL${scope} ORDER BY ${order}`).bind(...scopeArgs).all();
@@ -85,6 +92,7 @@ export async function handleHousehold(request, env, member, resource, id) {
   }
   if (request.method === 'POST' && !id) {
     const body = await bodyJson(request);
+    if (resource === 'news') body.sender_person_id = actor.id;
     const values = [...config.validate(body), ...await extraValues(env, resource, body)];
     const now = new Date().toISOString();
     const recordId = crypto.randomUUID();
@@ -100,6 +108,11 @@ export async function handleHousehold(request, env, member, resource, id) {
     if (!Number.isSafeInteger(body.version) || body.version < 1) throw new HttpError(400, 'A record version is required.');
     const now = new Date().toISOString();
     let record;
+    if (resource === 'news') {
+      const post = await env.DB.prepare('SELECT sender_person_id FROM news_posts WHERE id=? AND deleted_at IS NULL').bind(id).first();
+      if (!post || post.sender_person_id !== actor.id) throw new HttpError(403,'You can change only your own messages.');
+      body.sender_person_id = actor.id;
+    }
     if (request.method === 'DELETE') {
       record = await env.DB.prepare(`UPDATE ${table} SET deleted_at = ?, updated_at = ?, version = version + 1 WHERE id = ? AND version = ? AND deleted_at IS NULL${scope} RETURNING *`)
         .bind(now, now, id, body.version,...scopeArgs).first();

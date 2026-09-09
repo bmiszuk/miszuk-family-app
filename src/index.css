@@ -338,3 +338,18 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 .celebrations { padding: 10px; border-radius: 12px; margin-block: 8px; }
 .celebrations h3 { margin: 0 0 2px; }
 .celebrations > a { margin-top: 0; }
+/* Compact conversation: message first, with secondary metadata and one menu. */
+.chat-message { display:flex; align-items:baseline; gap:4px; padding:3px 0; }
+.chat-message:has(.chat-composer) { display:block; }
+.chat-line { flex:1; min-width:0; line-height:1.5; }
+.chat-line .prose { white-space:pre-wrap; }
+.chat-line .byline { font-size:11px; color:var(--muted); }
+.chat-message h3 { font-size:13px; margin:0; }
+.chat-menu { flex:none; }
+.chat-menu summary { cursor:pointer; min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; list-style:none; color:var(--muted); }
+.chat-menu[open] { max-width:180px; }
+.chat-message-actions { gap:2px; }
+.chat-compose-actions { gap:8px; }
+.chat-composer textarea { min-height:52px; }
+.relationship-draft { border-bottom:1px solid var(--border); padding-block:4px; }
+.relationship-draft > button { margin-left:8px; }

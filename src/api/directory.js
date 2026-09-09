@@ -1,5 +1,7 @@
 import { bodyJson, HttpError, stringField } from './errors.js';
 import { jsonResponse, isUuid } from './utils.js';
+import { householdIdentity } from './households.js';
+import { saveDirectoryPerson } from './directorySave.js';
 import { parseFamilyDate, chicagoDate } from '../directoryDates.js';
 
 function dateField(value, required = true) {
@@ -21,7 +23,7 @@ function version(body) {
   if (!Number.isSafeInteger(body.version) || body.version < 1) throw new HttpError(400, 'A record version is required.');
   return body.version;
 }
-async function directoryRequest(request, env, kind, id) {
+async function directoryRequest(request, env, kind, id, member) {
   const db = env.DB;
   if (id && !isUuid(id)) throw new HttpError(404, 'Not found.');
   if (request.method === 'GET' && !kind) {
@@ -32,6 +34,19 @@ async function directoryRequest(request, env, kind, id) {
   if (!['people', 'relationships'].includes(kind)) throw new HttpError(404, 'Not found.');
   if (!['POST', 'PATCH', 'DELETE'].includes(request.method) || (request.method === 'POST' ? Boolean(id) : !id)) throw new HttpError(405, 'Method not allowed.');
   const body = await bodyJson(request);
+  const actor = (await householdIdentity(env,member)).person;
+  const canEdit = async personId => Boolean(actor && (actor.id === personId || await db.prepare("SELECT id FROM relationships WHERE relationship_type='parent' AND person1_id=? AND person2_id=? AND deleted_at IS NULL").bind(actor.id,personId).first()));
+  const requireRelationship = async relationship => {
+    const allowed = relationship.relationship_type === 'parent' ? await canEdit(relationship.person2_id) : await canEdit(relationship.person1_id) || await canEdit(relationship.person2_id);
+    if (!allowed) throw new HttpError(403,'You can change relationships only for yourself or your children.');
+  };
+  if (kind === 'people' && id && !await canEdit(id)) throw new HttpError(403,'You can edit only yourself or your children.');
+  if (kind === 'relationships') {
+    const relationship = id ? await db.prepare('SELECT * FROM relationships WHERE id=? AND deleted_at IS NULL').bind(id).first() : body;
+    if (!relationship) throw new HttpError(409,'This relationship was removed.');
+    if (!id && (!isUuid(body.person1_id) || !isUuid(body.person2_id) || body.person1_id===body.person2_id)) throw new HttpError(400,'Choose two different people.');
+    await requireRelationship(relationship);
+  }
   const now = new Date().toISOString();
   let record;
   if (request.method === 'DELETE') {
@@ -43,15 +58,10 @@ async function directoryRequest(request, env, kind, id) {
     else if (id) email = (await db.prepare('SELECT login_email FROM people WHERE id=?').bind(id).first())?.login_email || null;
     values.push(email);
     const householdId=Object.hasOwn(body,'household_id') ? body.household_id || null : id ? (await db.prepare('SELECT household_id FROM people WHERE id=?').bind(id).first())?.household_id || null : null;
-    if(householdId && (!isUuid(householdId)||!await db.prepare('SELECT id FROM households WHERE id=?').bind(householdId).first()))throw new HttpError(400,'Choose a valid household.');
+    if(householdId && (!isUuid(householdId)||!await db.prepare('SELECT id FROM households WHERE id=? AND deleted_at IS NULL').bind(householdId).first()))throw new HttpError(400,'Choose a valid household.');
     values.push(householdId);
-    if (request.method === 'POST') {
-      const family = await db.prepare('SELECT id FROM families ORDER BY created_at, id LIMIT 1').first();
-      if (!family) throw new HttpError(409, 'The family record is missing.');
-      record = await db.prepare('INSERT INTO people(id,family_id,first_name,last_name,birth_date,login_email,household_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *').bind(crypto.randomUUID(), family.id, ...values, now, now).first();
-    } else {
-      record = await db.prepare('UPDATE people SET first_name=?,last_name=?,birth_date=?,login_email=?,household_id=?,updated_at=?,version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *').bind(...values, now, id, version(body)).first();
-    }
+    if (id) version(body);
+    record = await saveDirectoryPerson({db,id,body,values,now,dateField,requireRelationship});
   } else if (request.method === 'POST') {
     if (!['spouse', 'parent'].includes(body.relationship_type)) throw new HttpError(400, 'Choose spouse or parent/child.');
     if (!isUuid(body.person1_id) || !isUuid(body.person2_id) || body.person1_id === body.person2_id) throw new HttpError(400, 'Choose two different people.');
@@ -67,10 +77,11 @@ async function directoryRequest(request, env, kind, id) {
   if (!record) throw new HttpError(409, 'Someone changed this record. Refresh and reopen it before trying again.');
   return jsonResponse(request.method === 'DELETE' ? { ok: true } : { item: record }, request.method === 'POST' ? 201 : 200);
 }
-export async function handleDirectory(request, env, kind, id) {
-  try { return await directoryRequest(request, env, kind, id); }
+export async function handleDirectory(request, env, kind, id, member) {
+  try { return await directoryRequest(request, env, kind, id, member); }
   catch (error) {
     if (/UNIQUE constraint failed.*(?:idx_people_login_email|people.login_email)/.test(String(error.message))) throw new HttpError(409, 'That login email is already assigned to another family member.');
+    if (/NOT NULL constraint failed: people.version/.test(String(error.message))) throw new HttpError(409,'Someone changed this record. Refresh and reopen it.');
     const message = String(error.message).match(/directory: ([^\n]+?)(?:\s*: SQLITE|$)/)?.[1];
     if (message) throw new HttpError(409, message);
     throw error;

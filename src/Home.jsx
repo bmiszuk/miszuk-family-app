@@ -30,7 +30,7 @@ export default function Home({member}) {
         {!events.error && (events.items === null ? <p>Loading…</p> : event ? <><p className="summary-value summary-clamp">{event.title}</p><p className="muted">{eventDateLabel(event)}</p></> : <p>Nothing coming up yet.</p>)}
         <a href="#calendar">Open calendar <span aria-hidden="true">→</span></a>
       </article>
-      <FamilyNotices collection={news} people={directory.data?.people || []} />
+      <FamilyNotices currentPersonId={member.person?.id} collection={news} people={directory.data?.people || []} />
     </div>
   </section>;
 }

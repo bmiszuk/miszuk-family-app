@@ -40,6 +40,8 @@ export default function GroceryList({currentPersonId,householdName}) {
   const [editing, setEditing] = useState(null);
   const [legacy, setLegacy] = useState(oldGroceries);
   const items = collection.items || [];
+  const checked = items.filter(item => item.done).length;
+  const [confirmChecked,setConfirmChecked] = useState(false);
   const save = (item, changes) => action.run(() => api(`groceries/${item.id}`, { method: 'PATCH', body: { ...changes, version: item.version } }));
   return <section className="card" id="groceries" aria-label="Grocery List">
     <SectionHeader icon="groceries" title="Grocery List" subtitle={householdName || 'Groceries'} count={items.filter(item => !item.done).length} />
@@ -62,6 +64,7 @@ export default function GroceryList({currentPersonId,householdName}) {
         </div>
       </>}
     </li>)}</ul>
+    {checked > 0 && <div className="actions">{confirmChecked ? <><span>Delete all {checked} checked items?</span><button className="quiet danger" disabled={action.busy} onClick={async()=>{if(await action.run(()=>api('groceries/checked',{method:'DELETE'}),'Checked items removed.')){setConfirmChecked(false);setEditing(null);}}}>Yes, delete checked</button><button className="quiet" disabled={action.busy} onClick={()=>setConfirmChecked(false)}>Cancel</button></> : <button className="text-button danger" disabled={action.busy} onClick={()=>setConfirmChecked(true)}>Delete checked ({checked})</button>}</div>}
     <p className="sync-note">Refreshes every 15 seconds and when you return. <button className="text-button" onClick={collection.refresh} disabled={action.busy}>Refresh now</button></p>
   </section>;
 }
