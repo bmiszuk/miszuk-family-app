@@ -29,11 +29,16 @@ export function useCollection(resource) {
   }, [refresh]);
   return { items, error, refresh };
 }
-export function useAction(refresh) {
+export function useAction(refresh, noticeDuration = 0) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState('');
   const locked = useRef(false);
+  useEffect(() => {
+    if (!notice || !noticeDuration || busy) return;
+    const timer = setTimeout(() => setNotice(''), noticeDuration);
+    return () => clearTimeout(timer);
+  }, [notice, noticeDuration, busy]);
   async function run(action, message = 'Saved.') {
     if (locked.current) return false;
     locked.current = true; setBusy(true); setError(null); setNotice('');

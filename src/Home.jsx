@@ -17,7 +17,7 @@ export default function Home({member}) {
   const news = useCollection('news');
   const upcoming = upcomingCoziEvents(events.items || [],new Date(),3);
   const [name,setName]=useState('');
-  const action=useAction(groceries.refresh);
+  const action=useAction(groceries.refresh, 1800);
   async function quickAdd(event) {
     event.preventDefault();
     if(await action.run(()=>api('groceries',{method:'POST',body:{name:name.trim(),requester_person_id:member.person?.id||null}}),'Item added.')) setName('');

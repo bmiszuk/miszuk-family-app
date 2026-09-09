@@ -36,7 +36,7 @@ export default function GroceryList({currentPersonId,householdName}) {
   const people = directory.data?.people || [];
   const names = displayNames(people);
   const collection = useCollection('groceries');
-  const action = useAction(collection.refresh);
+  const action = useAction(collection.refresh, 1800);
   const [editing, setEditing] = useState(null);
   const [legacy, setLegacy] = useState(oldGroceries);
   const items = collection.items || [];

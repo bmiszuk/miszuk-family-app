@@ -407,3 +407,20 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 .family-notices .notices-list {margin:0;}
 .family-notices > a {margin-top:0;}
 .home-notice .byline {margin:2px 0 0;}
+
+/* Mobile entry forms only; list rows and desktop sizing stay unchanged. */
+@media(max-width:700px) {
+ .home-quick-add input,.home-quick-add button {height:44px;min-height:44px;}
+ .home-quick-add button {flex-basis:44px;}
+ #groceries > .grocery-form {gap:4px 6px;margin-bottom:4px;}
+ #groceries > .grocery-form label {gap:1px;line-height:1.3;}
+ #groceries > .grocery-form input,
+ #groceries > .grocery-form select,
+ #groceries > .grocery-form > button {height:44px;min-height:44px;padding:6px 8px;}
+ .chat-composer {gap:4px;padding-top:4px;}
+ .chat-composer > label {gap:2px;}
+ .chat-composer textarea {min-height:64px;max-height:180px;padding:6px 8px;line-height:1.5;field-sizing:content;}
+ .chat-compose-actions {gap:4px 8px;}
+ .chat-compose-actions > label:first-child {flex:1 1 auto;min-width:150px;min-height:44px;gap:6px;}
+ .chat-compose-actions > button {flex:none;width:auto;height:44px;min-height:44px;padding:6px 12px;}
+}
