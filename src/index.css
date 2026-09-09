@@ -147,7 +147,7 @@ footer { margin: 36px 0 8px; text-align: center; color: var(--muted); font-size:
   .summary-card { padding: 16px 18px; gap: 5px; display: grid; grid-template-columns: 24px minmax(0,1fr); column-gap: 12px; }
   .summary-card > .line-icon { grid-row: 1; }
   .summary-card > :not(.line-icon) { grid-column: 2; }
-  .summary-card h3 { align-self: center; }
+  .summary-card h3 { align-self: start; }
   .summary-card .summary-value { font-size: 16px; }
   .summary-card > a { font-size: 13px; min-height: 44px; margin-top: 2px; }
   footer { margin-top: 24px; }
@@ -374,9 +374,9 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 .home-grid {grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;}
 .home-grid > .dinner-tonight {margin:0;}
 .home-view > .celebrations {margin-top:14px;}
-.home-quick-add {display:flex;gap:6px;width:100%;margin:3px 0 0;}
-.home-quick-add input {flex:1;min-width:0;min-height:44px;}
-.home-quick-add button {flex:0 0 44px;min-height:44px;padding:0;font-size:22px;}
+.home-quick-add {display:flex;align-items:center;gap:6px;width:100%;margin:0;}
+.home-quick-add input {flex:1;min-width:0;height:48px;min-height:48px;padding:8px 10px;}
+.home-quick-add button {flex:0 0 48px;height:48px;min-height:48px;padding:0;font-size:22px;}
 .home-calendar-groups {width:100%;}
 .home-calendar-groups h4 {font-size:12px;margin:6px 0 2px;}
 .home-calendar-list li {display:block;padding:3px 0;line-height:1.45;}
@@ -388,5 +388,22 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 @media(max-width:700px) {
  .home-grid {grid-template-columns:minmax(0,1fr);}
  .page {padding-bottom:calc(110px + env(safe-area-inset-bottom,0px));}
- .agenda-list li {grid-template-columns:105px minmax(0,1fr);gap:8px;}
+ .agenda-list li {grid-template-columns:118px minmax(0,1fr);gap:8px;}
 }
+
+/* Dashboard hierarchy: compact content, with comfortable action targets. */
+.home-view h2,.home-view h3 {text-align:left;}
+.agenda-description > strong {font-size:14px;font-weight:500;line-height:1.4;}
+.home-calendar-list strong {font-size:13px;font-weight:500;}
+.home-calendar-list li {line-height:1.35;}
+.home-grid > .summary-card:first-child {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-content:start;}
+.home-grid > .summary-card:first-child > h3 {grid-column:1;align-self:center;}
+.home-grid > .summary-card:first-child > .summary-value {grid-column:2;font-size:12px;font-weight:400;text-align:right;}
+.home-grid > .summary-card:first-child > form,
+.home-grid > .summary-card:first-child > a,
+.home-grid > .summary-card:first-child > .error,
+.home-grid > .summary-card:first-child > .save-status {grid-column:1 / -1;}
+.family-notices {align-self:start;gap:2px;}
+.family-notices .notices-list {margin:0;}
+.family-notices > a {margin-top:0;}
+.home-notice .byline {margin:2px 0 0;}
