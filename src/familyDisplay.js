@@ -24,3 +24,8 @@ export const postedTime = value => new Date(value).toLocaleString('en-US', {time
 export function selectedPerson(selection, record, field, currentPersonId) {
   return selection ?? (record ? record[field] || '' : currentPersonId || '');
 }
+
+export function householdTitle(name, feature) {
+  const household = (name || '').replace(/\bhousehold\b/gi, '').replace(/\s+/g, ' ').trim();
+  return household ? household + ' ' + feature : feature;
+}

@@ -1,3 +1,4 @@
+import {householdTitle} from './familyDisplay.js';
 import Dinner from './Dinner.jsx';
 import FamilyNotices from './FamilyNotices.jsx';
 import { useCollection } from './useCollection.js';
@@ -20,7 +21,7 @@ export default function Home({member}) {
     <ErrorMessage error={directory.error} />
     <Celebrations directory={directory} compact />
     <div className="home-grid">
-      <article className="card summary-card"><Icon name="groceries" /><h3>Groceries</h3>
+      <article className="card summary-card"><Icon name="groceries" /><h3>{householdTitle(member.household?.name, 'Groceries')}</h3>
         <ErrorMessage error={groceries.error} />
         {!groceries.error && <p className="summary-value">{groceries.items === null ? 'Loading…' : `${count} ${count === 1 ? 'item' : 'items'} to pick up`}</p>}
         <a href="#groceries">Open grocery list <span aria-hidden="true">→</span></a>

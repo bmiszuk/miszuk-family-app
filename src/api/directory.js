@@ -1,5 +1,6 @@
 import { bodyJson, HttpError, stringField } from './errors.js';
 import { jsonResponse, isUuid } from './utils.js';
+import { canEditDirectoryPerson } from '../directoryPermissions.js';
 import { householdIdentity } from './households.js';
 import { saveDirectoryPerson } from './directorySave.js';
 import { parseFamilyDate, chicagoDate } from '../directoryDates.js';
@@ -35,12 +36,13 @@ async function directoryRequest(request, env, kind, id, member) {
   if (!['POST', 'PATCH', 'DELETE'].includes(request.method) || (request.method === 'POST' ? Boolean(id) : !id)) throw new HttpError(405, 'Method not allowed.');
   const body = await bodyJson(request);
   const actor = (await householdIdentity(env,member)).person;
-  const canEdit = async personId => Boolean(actor && (actor.id === personId || await db.prepare("SELECT id FROM relationships WHERE relationship_type='parent' AND person1_id=? AND person2_id=? AND deleted_at IS NULL").bind(actor.id,personId).first()));
+  const permissions = actor ? (await db.prepare('SELECT * FROM relationships WHERE deleted_at IS NULL AND (person1_id=? OR person2_id=?)').bind(actor.id,actor.id).all()).results : [];
+  const canEdit = personId => canEditDirectoryPerson(actor?.id,personId,permissions);
   const requireRelationship = async relationship => {
     const allowed = relationship.relationship_type === 'parent' ? await canEdit(relationship.person2_id) : await canEdit(relationship.person1_id) || await canEdit(relationship.person2_id);
-    if (!allowed) throw new HttpError(403,'You can change relationships only for yourself or your children.');
+    if (!allowed) throw new HttpError(403,'You can change relationships only for yourself, your children, or your spouse.');
   };
-  if (kind === 'people' && id && !await canEdit(id)) throw new HttpError(403,'You can edit only yourself or your children.');
+  if (kind === 'people' && id && !await canEdit(id)) throw new HttpError(403,'You can edit only yourself, your children, or your spouse.');
   if (kind === 'relationships') {
     const relationship = id ? await db.prepare('SELECT * FROM relationships WHERE id=? AND deleted_at IS NULL').bind(id).first() : body;
     if (!relationship) throw new HttpError(409,'This relationship was removed.');

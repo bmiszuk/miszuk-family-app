@@ -5,7 +5,7 @@ import {api} from './client.js';
 import {ErrorMessage} from './components/Shared.jsx';
 import {chicagoDate} from './directoryDates.js';
 import {weekStart,weekDays,addDays} from './dinnerDates.js';
-import {displayNames} from './familyDisplay.js';
+import {displayNames,householdTitle} from './familyDisplay.js';
 export default function Dinner({member,compact=false}) {
   const [next,setNext]=useState(false);
   const today=chicagoDate(),start=addDays(weekStart(today),next&&!compact?7:0);
@@ -18,7 +18,7 @@ export default function Dinner({member,compact=false}) {
   const save=(day,personId)=>action.run(()=>api(`dinner/${day}`,{method:'PUT',body:{person_id:personId||null,version:row(day)?.version||0}}),'Dinner saved.');
   const label=day=>names.get(row(day)?.person_id)||'Open';
   return <section className={compact?'card dinner-tonight':'card dinner-week'} aria-label={compact?'Dinner tonight':'Dinner signup'}>
-    <div className="dinner-heading"><h2>{compact?'Dinner tonight':'Dinner'}</h2>{!compact&&<span className="muted">{member.household?.name}</span>}</div>
+    <div className="dinner-heading"><h2>{householdTitle(member.household?.name,compact?'Dinner Tonight':'Dinner')}</h2></div>
     <ErrorMessage error={action.error||collection.error||directory.error} />
     {compact?<div className="dinner-summary"><strong>{collection.items===null?'Loading…':label(today)}</strong>
       {collection.items!==null&&!row(today)?.person_id&&canAssign&&<button className="text-button" disabled={action.busy} onClick={()=>save(today,member.person.id)}>Claim tonight</button>}

@@ -6,7 +6,7 @@ import { useAction } from './useCollection.js';
 import { useDirectory } from './useDirectory.js';
 import { ErrorMessage, DeleteButton, SectionHeader } from './components/Shared.jsx';
 import { familyDateLabel, parseFamilyDate } from './directoryDates.js';
-import Celebrations from './Celebrations.jsx';
+import { canEditDirectoryPerson } from './directoryPermissions.js';
 
 const fullName = person => person ? `${person.first_name} ${person.last_name || ''}`.trim() : 'Unknown person';
 function DateFields({ value, prefix, title, optional = false }) {
@@ -22,11 +22,11 @@ function formDate(form, prefix) {
   if (!month && !day && !year) return '';
   return `${year ? `${year}-` : ''}${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
-function PersonForm({person,relationships,people,currentPersonId,busy,onSave,onCancel,households}) {
+function PersonForm({person,relationships,permissionRelationships,people,currentPersonId,busy,onSave,onCancel,households}) {
   const self=person?.id || 'self';
   const [links,setLinks]=useState(relationships.filter(r=>['parent','spouse'].includes(r.relationship_type)));
   const [type,setType]=useState('parent'),[other,setOther]=useState('');
-  const canEdit=id=>currentPersonId && (id===currentPersonId || relationships.some(r=>r.relationship_type==='parent'&&r.person1_id===currentPersonId&&r.person2_id===id));
+  const canEdit=id=>canEditDirectoryPerson(currentPersonId,id,permissionRelationships);
   const allowed=r=>!person || (r.relationship_type==='parent'?canEdit(r.person2_id):canEdit(r.person1_id)||canEdit(r.person2_id));
   return <form className="stack-form editor" onSubmit={event=>{
     event.preventDefault();const form=new FormData(event.currentTarget);
@@ -60,7 +60,7 @@ export default function Directory({currentPersonId}) {
   const people = directory.data?.people || [], relationships = directory.data?.relationships || [];
   const selected = people.find(person => person.id === selectedId);
   const related = relationships.filter(item => item.person1_id === selectedId || item.person2_id === selectedId);
-  const canEdit = selected && currentPersonId && (selected.id===currentPersonId || relationships.some(r=>r.relationship_type==='parent'&&r.person1_id===currentPersonId&&r.person2_id===selected.id));
+  const canEdit = canEditDirectoryPerson(currentPersonId,selected?.id,relationships);
   const matching = people.filter(person => fullName(person).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const mutate = (path, method, body, notice) => action.run(() => api(`directory/${path}`, { method, body }), notice);
   return <section className="directory-view" aria-label="Family Directory">
@@ -68,7 +68,7 @@ export default function Directory({currentPersonId}) {
     <HouseholdManager collection={households} people={people} />
     <div className="directory-toolbar"><label>Find a person<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search first or last name" /></label><button disabled={Boolean(editor) || action.busy} onClick={() => setEditor({links:[]})}>Add person</button><button className="quiet" disabled={action.busy} onClick={directory.refresh}>Refresh directory</button></div>
     <ErrorMessage error={action.error || directory.error} /><p className="save-status" role="status">{action.busy ? 'Saving…' : action.notice}</p>
-    {editor && households.items && <PersonForm people={people} relationships={editor.links} currentPersonId={currentPersonId} households={households.items || []} key={editor.id || 'new'} person={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
+    {editor && households.items && <PersonForm permissionRelationships={relationships} people={people} relationships={editor.links} currentPersonId={currentPersonId} households={households.items || []} key={editor.id || 'new'} person={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
       if (await mutate(editor.id ? `people/${editor.id}` : 'people', editor.id ? 'PATCH' : 'POST', { ...values, ...(editor.id ? { version: editor.version } : {}) }, 'Person saved.')) setEditor(null);
     }} />}
     {!directory.data && !directory.error && <p role="status">Loading directory…</p>}
@@ -82,7 +82,6 @@ export default function Directory({currentPersonId}) {
       <h2>{fullName(selected)}</h2><p>Birthday · {familyDateLabel(selected.birth_date)}</p>
       <p>Household · {households.items?.find(h=>h.id===selected.household_id)?.name || 'Not assigned'}</p><p>Login email · {selected.login_email || 'Not assigned'}</p>
       {canEdit && <div className="actions"><button className="quiet" disabled={Boolean(editor) || action.busy} onClick={() => setEditor({...selected,links:related})}>Edit person</button><DeleteButton label={fullName(selected)} disabled={related.length > 0 || Boolean(editor) || action.busy} onDelete={async () => { const saved = await mutate(`people/${selected.id}`, 'DELETE', { version: selected.version }, 'Person removed.'); if (saved) setSelectedId(null); return saved; }} /></div>}
-      {related.length > 0 && <p className="muted">Remove relationships in Edit mode before deleting this person. Other people will be kept.</p>}
       <h3>Relationships</h3>
       {!related.length && <p className="muted">No relationships assigned.</p>}
       <ul className="relationship-list">{related.map(relationship => {
@@ -94,6 +93,5 @@ export default function Directory({currentPersonId}) {
         </li>;
       })}</ul>
     </> : <p className="muted">Select a person to see their birthday and relationships.</p>}</div></div>
-    <Celebrations directory={directory} />
   </section>;
 }

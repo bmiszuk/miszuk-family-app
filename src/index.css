@@ -353,3 +353,10 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 .chat-composer textarea { min-height:52px; }
 .relationship-draft { border-bottom:1px solid var(--border); padding-block:4px; }
 .relationship-draft > button { margin-left:8px; }
+
+.person-detail { gap: 6px; align-content: start; }
+.person-detail > p, .person-detail h2, .person-detail h3 { margin: 0; }
+.person-detail > h3 { margin-top: 6px; }
+.person-detail .relationship-list { margin: 0; }
+.person-detail .relationship-list > li { padding: 4px 0; }
+.person-detail .relationship-list p { margin: 0; line-height: 1.45; }
