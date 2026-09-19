@@ -1,0 +1,223 @@
+# Miszuk Family Digital Systems Handbook — Outline
+
+Status: initial outline and information-gathering document, September 19, 2026.
+Audience: Bob and a technically competent family member maintaining the systems without Bob or AI assistance.
+
+## Scope and evidence
+
+This outline uses repository evidence only. No live account, DNS, server, database, backup, or production configuration was inspected. **Repository-known** means documented or represented in source, not independently verified in production. **Collect / verify** marks missing information and proposed handbook content, not an existing capability.
+
+Primary sources: [architecture](../../ARCHITECTURE.md), [README](../../README.md), [package scripts](../../package.json), [Worker configuration](../../wrangler.jsonc), [migrations](../../migrations/README.md), [Cozi connection](../cozi-calendar.md), and [Vehicles requirements](../VEHICLES_REQUIREMENTS.md). README release notes and Cozi deployment notes include historical states; reconcile them with current source and live systems before turning them into operating instructions.
+
+For each eventual system entry, record its purpose, owner and backup contact, dependencies, administrative entry point, configuration location, recovery procedure, last verification date, and evidence. Procedures should state prerequisites, expected results, failure handling, and rollback without depending on chat history or AI.
+
+Never record passwords, tokens, private keys, recovery codes, private calendar URLs, or exported family data here. Record only approved storage locations and recovery methods. Keep sensitive infrastructure inventories and contact details in an appropriately restricted location; do not assume this repository will always remain private.
+
+## 1. Start Here / Break Glass
+
+**Repository-known**
+- The family portal is identified as `family.miszuk.com`; its stack is React/Vite, Cloudflare Workers, Cloudflare Access, and D1.
+- Authentication, application deployment, and family records are separate concerns. Removing a Directory person is not an access-revocation procedure.
+- The repository contains source and some operating instructions, but no complete successor-access or emergency-recovery runbook.
+
+**Collect / verify**
+- [ ] Identify a successor, emergency contacts, account owners, and authorized access arrangements.
+- [ ] Document where the handbook and credential-recovery instructions can be found if the portal, email, or home network is unavailable.
+- [ ] Create a dependency map and a short outage triage guide: device/network, DNS, Access, Worker, D1, external services.
+- [ ] Establish how to regain registrar, email, Cloudflare, GitHub, and home infrastructure access without Bob's device or an already-working family email account.
+- [ ] Define safe first actions, escalation points, and actions to avoid until backups and the failure are understood.
+
+## 2. Domain and DNS
+
+**Repository-known**
+- The portal uses `family.miszuk.com`; README describes a Cloudflare Worker route for it.
+- Worker configuration is not a complete DNS-zone export or registrar inventory.
+
+**Collect / verify**
+- [ ] Registrar, legal/account owner, renewal dates, billing, auto-renewal, nameservers, and recovery method.
+- [ ] Authoritative DNS provider and an approved inventory of records, proxy settings, TTLs, and service dependencies.
+- [ ] Certificate ownership/renewal, subdomain purposes, and a tested process for restoring DNS.
+- [ ] Confirm any proposed `photos.miszuk.com` entry separately; no deployed Photos destination is established by the repository.
+
+## 3. Email / Google Workspace
+
+**Repository-known**
+- App documentation describes Cloudflare Access email-PIN sign-in and optional Directory login-email matching.
+- This does not establish Google Workspace tenancy, mail routing, mailbox ownership, or administrator access.
+
+**Collect / verify**
+- [ ] Confirm email provider/Workspace tenant, subscription, billing owner, administrators, and independent administrator recovery.
+- [ ] Inventory domains, mailboxes, aliases, groups, forwarding, and successor responsibilities in a restricted record.
+- [ ] Document MX, SPF, DKIM, DMARC, delivery troubleshooting, and Access PIN delivery dependencies.
+- [ ] Establish mailbox retention/export/backup policies and recovery procedures without copying mail or credentials here.
+
+## 4. Family App
+
+**Repository-known**
+- One React application, one Worker, and one D1 database form the deployment unit.
+- `src/app` owns the shell, identity loading, and hash navigation; `src/features` owns feature pages and Home cards; `src/shared` supplies browser utilities/UI; `src/domain` contains pure shared rules.
+- `src/api/<feature>` owns feature validation and persistence; shared authentication, identity, and permission modules enforce request boundaries.
+- Current features include Groceries, Dinner, Chat, Directory, Home summaries, and the read-only Cozi Calendar. Legacy APIs remain for compatibility.
+- Directory permits self, parent-to-child, and spouse editing. Chat ownership and household-scoped Groceries/Dinner have distinct policies; general administrator roles are not implemented.
+- The PWA is documented as online-only. Local development and portable preview use separate local database state.
+
+**Collect / verify**
+- [ ] Record the actually deployed revision, feature inventory, user-facing entry points, and known limitations.
+- [ ] Provide a short file map, local setup checklist, test workflow, and deployment/rollback procedure executable by a successor.
+- [ ] Explain login-email mapping, household assignment/default fallback, and relationship management without publishing real family records.
+- [ ] Document Cozi ownership, secret recovery, outage behavior, and verification of recurrence/timezones; display timezone is America/Chicago.
+- [ ] Resolve outdated README statements before using them as current operational instructions.
+
+## 5. GitHub / Source Control
+
+**Repository-known**
+- The checkout's origin is `https://github.com/bmiszuk/miszuk-family-app.git`.
+- Source, migrations, tests, documentation, and dependency lockfile are versioned. `.gitignore` excludes local environment files, Wrangler state, build output, and a named database-backup pattern.
+- Git history and tags can identify source rollback points; they do not prove which release is currently deployed or back up live data.
+
+**Collect / verify**
+- [ ] Confirm repository visibility, ownership/succession, collaborator access, branch protections, default branch, and any automation.
+- [ ] Document a working clone/authentication/push method and account recovery location without credential values.
+- [ ] Define release tagging, review expectations, repository backup, and restoration from an independent copy.
+- [ ] Review historical-data exposure noted in README through a separate authorized process; ignore rules do not remove Git history or guarantee secret exclusion.
+
+## 6. Cloudflare
+
+**Repository-known**
+- `wrangler.jsonc` identifies Worker `miszuk-family-app`, entry point `worker.js`, D1 binding `DB` / database `family-db`, static assets, and Access issuer/audience configuration.
+- The Worker validates Access JWTs before API routing; mutations also have origin protection. API responses are private/no-store.
+- `COZI_CALENDAR_URL` is documented as a Worker secret, never a browser variable. Observability is enabled in repository configuration.
+- Database migrations are explicitly separate from deployment.
+
+**Collect / verify**
+- [ ] Account/zone ownership, billing, successor access, recovery, actual routes, deployments, and binding inventory.
+- [ ] Export a sanitized description of Access applications, email-PIN provider, policies, session durations, and alternate-host protection.
+- [ ] Inventory secret names, approved recovery sources, renewal/rotation ownership, and deployment tooling; never their values.
+- [ ] Record logs/retention, alerting, costs/limits, D1 recovery capabilities, and Worker rollback steps.
+- [ ] Confirm whether any Cloudflare Tunnels exist; no home tunnel topology is established here.
+
+## 7. Home Network
+
+**Repository-known**
+- No authoritative home-network topology or configuration inventory is supplied by the reviewed repository documentation.
+
+**Collect / verify**
+- [ ] ISP, modem/ONT, router/firewall, switches, access points, ownership, and support contacts.
+- [ ] Restricted topology: subnets/VLANs, DHCP reservations, DNS, service addresses, remote access, and inbound exposure.
+- [ ] Configuration backups, UPS coverage, outage startup order, and recovery without working internet.
+
+## 8. Proxmox
+
+**Repository-known**
+- No Proxmox host inventory, version, cluster layout, or recovery procedure is documented; this outline does not confirm a deployed configuration.
+
+**Collect / verify**
+- [ ] Hosts, management entry points, versions/licensing, CPU/RAM, storage pools, bridges, and VM/container IDs.
+- [ ] Administrative recovery, update/reboot procedure, startup ordering, and console access.
+- [ ] Guest/configuration backup destinations, retention, restore tests, and host rebuild procedure.
+
+## 9. VMs and Docker Services
+
+**Repository-known**
+- The family app's documented deployment is Cloudflare, not a home Docker deployment. No home VM/service inventory is established.
+
+**Collect / verify**
+- [ ] For every guest/service: purpose, owner, OS/version, host, resource allocation, endpoints, dependencies, and restart policy.
+- [ ] Compose/configuration locations, image versions, volumes/bind mounts, networks, health checks, and secret-storage references.
+- [ ] Startup/shutdown, upgrade/rollback, log inspection, data backup, and individual-service restoration procedures.
+
+## 10. Storage
+
+**Repository-known**
+- D1 holds application records; migrations describe the application schema. Local preview databases are separate from production.
+- Vehicles requirements propose R2 for future permanent binary attachments; they explicitly do not describe implemented storage.
+- No authoritative home-disk, filesystem, mount, or photo-archive inventory is supplied.
+
+**Collect / verify**
+- [ ] Physical disks, capacities, health, filesystems/pools, mount paths, encryption recovery, permissions, and free-space thresholds.
+- [ ] Identify authoritative data versus caches/generated assets, and which services can write each location.
+- [ ] Confirm archive hardware and folder structure, permitted/private photo paths, and separate future upload storage.
+- [ ] Record disk replacement and storage restoration procedures; distinguish redundancy from backup.
+
+## 11. Backup Strategy
+
+**Repository-known**
+- README/migration guidance calls for a private remote D1 export before production migrations; deployment does not automatically apply migrations.
+- Historical backup references are not proof of a current schedule, retained usable backup, or successful restore.
+
+**Collect / verify**
+- [ ] Build a backup matrix for D1, source, DNS/configuration, email, home guests, service databases, archive, and uploads.
+- [ ] For each: owner, method, destination, schedule, retention, encryption-key recovery, off-site/offline protection, and failure monitoring.
+- [ ] Set acceptable data loss and recovery time, then record the latest independent restore test and result.
+- [ ] Verify actual D1 Time Travel availability/retention and exports; keep private database backups outside the repository.
+
+## 12. Photos
+
+**Repository-known**
+- Photos is not an implemented feature in the documented app architecture. No Immich installation, external-library configuration, or photo-host authorization is defined here.
+- Existing navigation belongs to `src/app`; feature-specific policies belong at server boundaries. Hiding a navigation link is not authorization.
+
+**Collect / verify**
+- [ ] Confirm the intended platform, hosting location, initial audience, and eventual sharing/upload requirements with Bob.
+- [ ] Record the authoritative archive, read-only indexing boundaries, excluded/private folders, and separate upload destination before implementation.
+- [ ] Define direct-hostname protection as well as portal visibility; record external-service authentication and origin-access controls.
+- [ ] Collect sizing, database/thumbnail storage needs, backups, upgrades, and recovery responsibilities independently of the archive.
+- [ ] Keep future design and installation procedures explicitly separate from the current system inventory.
+
+## 13. Security and Credentials
+
+**Repository-known**
+- Trusted Access identity maps to an optional Directory person and household; client-supplied email is not authenticated identity.
+- Shared policies deny unknown actions; UI visibility does not replace API enforcement. Directory relationships are not universal permission grants.
+- Local development bypass is documented as loopback-only and must not be enabled in production.
+
+**Collect / verify**
+- [ ] Approved password-manager/vault location, ownership, successor access, MFA recovery process, and offline emergency instructions.
+- [ ] Account and secret inventory by name/purpose only, with authorized recovery location and rotation responsibility.
+- [ ] Join/leave/revocation procedure across Cloudflare, app identity, GitHub, email, and future external services.
+- [ ] Incident response contacts, device-loss procedure, audit/log access, and restricted-document handling rules.
+
+## 14. Hardware Inventory
+
+**Repository-known**
+- The repository provides no complete physical hardware inventory. Development-machine notes are not an infrastructure inventory.
+
+**Collect / verify**
+- [ ] Record devices, roles, models, asset identifiers, location, purchase/warranty information, and replacement priority in a restricted inventory.
+- [ ] Include servers, disks, network equipment, UPS units/batteries, console equipment, and essential spares.
+- [ ] Link each device to its configuration backup, maintenance owner, and disposal/data-erasure procedure.
+
+## 15. Disaster Recovery
+
+**Repository-known**
+- Source recovery, Worker rollback, and D1 restoration are separate operations. Rolling back code does not undo schema/data changes.
+- The repository does not contain a complete tested end-to-end disaster-recovery runbook.
+
+**Collect / verify**
+- [ ] Prepare scenarios for lost administrator access, domain/email failure, bad deployment, data loss, failed disks/host, and loss of the home site.
+- [ ] For each: dependencies, access prerequisites, backup selection, safe restoration target, validation, cutover, and rollback/abort conditions.
+- [ ] Determine restoration order from actual dependencies, including account recovery without family email or home infrastructure.
+- [ ] Perform isolated restore exercises; record dates/results and a successor's ability to follow the instructions unaided.
+
+## 16. Routine Maintenance
+
+**Repository-known**
+- `package.json` provides tests, lint, production build, and combined `npm run check`; `npm run deploy` runs checks before Wrangler deployment.
+- Remote migration listing/application are separate scripts; local development/preview must remain distinct from production.
+
+**Collect / verify**
+- [ ] Set owners and cadence for patching, backup/restore checks, disk/UPS health, capacity, renewal/billing review, and account-access review.
+- [ ] Establish release checklist, rollback checkpoint, private backup requirements for data changes, and focused post-release verification.
+- [ ] Document supported tool versions and a verified deployment process, including resolution of historical Windows tooling limitations.
+- [ ] Schedule handbook review after infrastructure changes and periodically with the successor.
+
+## 17. Change Log
+
+**Repository-known**
+- Git history records source/documentation changes; README includes historical release notes. Neither alone is a complete infrastructure change log.
+
+**Collect / verify**
+- [ ] Choose the authoritative restricted operations-log location and its maintainer.
+- [ ] Use fields: date/time and timezone, operator, system, reason, change/reference, verification, backup/rollback reference, and outstanding work.
+- [ ] Link releases to deployed Worker versions and migration history without including private data or secrets.
+- [ ] Initial handbook entry: this outline records repository evidence only; live infrastructure inventory and operational procedures remain to be collected and verified.
