@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPair, SignJWT } from 'jose';
-import { verifyIdentity, checkOrigin } from '../src/api/auth.js';
+import { verifyIdentity, checkOrigin } from '../src/api/shared/auth.js';
 
 const { privateKey, publicKey } = await generateKeyPair('RS256');
 const issuer = 'https://test.cloudflareaccess.com';

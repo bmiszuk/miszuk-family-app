@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sectionFromHash, nextEvent, latestNews } from '../src/navigation.js';
+import { sectionFromHash, nextEvent, latestNews } from '../src/app/navigation.js';
 
 test('navigation supports direct section links and safe home fallback', () => {
   for (const id of ['home', 'groceries', 'calendar', 'chat', 'directory']) assert.equal(sectionFromHash(`#${id}`), id);

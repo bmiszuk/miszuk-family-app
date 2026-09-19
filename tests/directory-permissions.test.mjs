@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canEditDirectoryPerson} from '../src/directoryPermissions.js';
-import {householdTitle} from '../src/familyDisplay.js';
+import {canEditDirectoryPerson} from '../src/domain/directoryPermissions.js';
+import {householdTitle} from '../src/domain/familyDisplay.js';
 
 test('shared Directory permission rule covers self, parent, both spouses, and unrelated people',()=>{
  const relationships=[{relationship_type:'parent',person1_id:'a',person2_id:'child'},{relationship_type:'spouse',person1_id:'a',person2_id:'b'}];

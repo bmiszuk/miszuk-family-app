@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chicagoDate, celebrations, parseFamilyDate } from '../src/directoryDates.js';
+import { chicagoDate, celebrations, parseFamilyDate } from '../src/domain/directoryDates.js';
 const person = (id, date) => ({ id, first_name: id, birth_date: date });
 test('Chicago today does not follow UTC or device timezone', () => {
   assert.equal(chicagoDate(new Date('2026-01-01T03:00:00Z')), '2025-12-31');

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {weekStart,weekDays,addDays,validDay} from '../src/dinnerDates.js';
-import {activeNotices} from '../src/familyDisplay.js';
+import {weekStart,weekDays,addDays,validDay} from '../src/domain/dinnerDates.js';
+import {activeNotices} from '../src/domain/familyDisplay.js';
 test('dinner weeks cross year boundary without recurring assignments',()=>{
  assert.equal(weekStart('2027-01-01'),'2026-12-28');
  assert.equal(weekDays('2026-12-28')[6],'2027-01-03');

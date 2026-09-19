@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {displayNames,chronologicalMessages,activeNotices} from '../src/familyDisplay.js';
-import {celebrations} from '../src/directoryDates.js';
+import {displayNames,chronologicalMessages,activeNotices} from '../src/domain/familyDisplay.js';
+import {celebrations} from '../src/domain/directoryDates.js';
 test('short date names omit middles and disambiguate first and full names',()=>{
  const people=[{id:'1',first_name:'Russell Thore',last_name:'Schollmeyer',birth_date:'2024-09-12'},{id:'2',first_name:'Jessica L',last_name:'Hatfield'},{id:'3',first_name:'Jessica R',last_name:'Smith'},{id:'4',first_name:'John A',last_name:'Smith'},{id:'5',first_name:'John B',last_name:'Smith'}];
  const names=displayNames(people);
@@ -15,7 +15,7 @@ test('chat is chronological, only pinned messages reach Home, unpin keeps messag
  assert.deepEqual(activeNotices(posts).map(x=>x.id),['b']);posts[0].home_notice=false;assert.equal(activeNotices(posts).length,0);assert.equal(chronologicalMessages(posts).length,2);
 });
 
-import {selectedPerson} from '../src/familyDisplay.js';
+import {selectedPerson} from '../src/domain/familyDisplay.js';
 test('mapped defaults apply on new forms, preserve edits, clearing and alternate selections',()=>{
  for(const field of ['requester_person_id','sender_person_id']){
   assert.equal(selectedPerson(undefined,null,field,'me'),'me');

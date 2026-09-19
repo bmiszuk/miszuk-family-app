@@ -266,3 +266,15 @@ test('empty household retirement preserves data and assigned households are prot
  const fallback=(await request('/api/me')).data.member.household;
  assert.equal((await request(`/api/households/${fallback.id}`,'DELETE')).status,409);
 });
+
+test('legacy families and people endpoints retain their existing response contracts',async t=>{
+ const {request}=fixture(t);
+ const family=await request('/api/families','POST',{name:'Legacy family'});
+ assert.equal(family.status,201);
+ const list=await request('/api/families');
+ assert.ok(list.data.families.some(f=>f.id===family.data.family.id));
+ const person=await request('/api/people','POST',{family_id:family.data.family.id,first_name:'Legacy',last_name:'Person'});
+ assert.equal(person.status,201);
+ const people=await request('/api/people?familyId='+family.data.family.id);
+ assert.equal(people.data.people[0].id,person.data.person.id);
+});

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { eventIsPast, localDateTime, toUtc } from '../src/calendar.js';
+import { eventIsPast, localDateTime, toUtc } from '../src/domain/calendar.js';
 
 test('all-day events remain current through their inclusive end date', () => {
   const event = { all_day: true, start_at: '2026-12-24', end_at: '2026-12-25' };

@@ -1,7 +1,7 @@
 import { createApiRouter } from './src/api/router.js';
-import { authenticate, checkOrigin } from './src/api/auth.js';
-import { HttpError } from './src/api/errors.js';
-import { jsonResponse } from './src/api/utils.js';
+import { authenticate, checkOrigin } from './src/api/shared/auth.js';
+import { HttpError } from './src/api/shared/errors.js';
+import { jsonResponse } from './src/api/shared/utils.js';
 
 const handleApiRequest = createApiRouter();
 

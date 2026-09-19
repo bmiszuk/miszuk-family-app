@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {can,householdScope} from '../src/api/shared/permissions.js';
+import {householdIdentity} from '../src/api/shared/identity.js';
+test('central policies preserve relationship permissions without cross-feature grants',()=>{
+ const a={person:{id:'a',household_id:'h'},household:{id:'h'}},b={person:{id:'b'},household:{id:'h'}};
+ const relationships=[{relationship_type:'spouse',person1_id:'a',person2_id:'b'},{relationship_type:'parent',person1_id:'a',person2_id:'c'}];
+ const context={relationships};
+ for(const id of ['a','b','c'])assert.equal(can(a,'person.edit',{id},context),true);
+ assert.equal(can(b,'person.edit',{id:'a'},context),true);
+ assert.equal(can(a,'person.edit',{id:'other'},context),false);
+ assert.equal(can(a,'relationship.edit',{relationship_type:'parent',person2_id:'c'},context),true);
+ assert.equal(can(a,'chat.edit',{sender_person_id:'b'},context),false);
+ assert.equal(can(a,'chat.edit',{sender_person_id:'a'}),true);
+ assert.equal(can(a,'grocery.access',{household_id:'other'}),false);
+ assert.equal(can(a,'vehicle.edit',{id:'b'},context),false);
+ assert.equal(can(null,'household.manage'),false);
+ assert.equal(can({email:'external@example.net'},'household.manage'),true);
+ assert.equal(can({person:null},'chat.post'),false);
+ assert.equal(can(b,'dinner.assign'),false);
+ assert.equal(can(a,'dinner.assign'),true);
+ assert.equal(householdScope(a,'groceries'),'h');
+ assert.equal(householdScope(a,'dinner'),'h');
+ assert.throws(()=>householdScope(a,'vehicles'));
+});
+test('identity matches a provisioned external email without applying a domain policy',async()=>{
+ const seen=[];const env={DB:{prepare(sql){return {bind(value){seen.push(value);return this;},async first(){return sql.includes('FROM people')?{id:'person',household_id:'house'}:{id:'house'};}};}}};
+ const identity=await householdIdentity(env,{id:'trusted-subject',email:' External@Example.NET '});
+ assert.deepEqual(seen,['external@example.net','house']);
+ assert.equal(identity.person.id,'person');assert.equal(identity.id,'trusted-subject');
+});

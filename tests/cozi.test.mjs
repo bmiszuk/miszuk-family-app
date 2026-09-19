@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {parseCoziFeed} from '../src/api/coziFeed.js';
-import {createCoziHandler} from '../src/api/cozi.js';
-import {upcomingCoziEvents,coziAgenda,coziDateLabel,coziTimeLabel} from '../src/coziCalendar.js';
+import {parseCoziFeed} from '../src/api/calendar/coziFeed.js';
+import {createCoziHandler} from '../src/api/calendar/cozi.js';
+import {upcomingCoziEvents,coziAgenda,coziDateLabel,coziTimeLabel} from '../src/domain/coziCalendar.js';
 const sample=readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8');
 const now=new Date('2026-09-09T17:00:00Z');
 const wrap=events=>'BEGIN:VCALENDAR\nVERSION:2.0\n'+events+'\nEND:VCALENDAR';
