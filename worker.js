@@ -1,3 +1,4 @@
+import { observeAccountComparison } from './src/api/shared/accountComparison.js';
 import { createApiRouter } from './src/api/router.js';
 import { authenticate, checkOrigin } from './src/api/shared/auth.js';
 import { HttpError } from './src/api/shared/errors.js';
@@ -6,13 +7,15 @@ import { jsonResponse } from './src/api/shared/utils.js';
 const handleApiRequest = createApiRouter();
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
       try {
         const member = await authenticate(request, env);
         checkOrigin(request, env);
+        // Background observation only; legacy identity and all policies stay authoritative.
+        if (!member.local && ctx?.waitUntil) ctx.waitUntil(observeAccountComparison(env, member));
         return await handleApiRequest(request, env, member);
       } catch (error) {
         if (error instanceof HttpError) return jsonResponse({ error: error.message }, error.status);
