@@ -61,7 +61,7 @@ test('unprovisioned, disabled, pending and mismatched subjects/emails do not res
   for(const principal of [{...member,id:'wrong'},{...member,email:'wrong@example.test'}])assert.equal((await resolveAccount(env,principal)).status,'identity_mismatch');
   assert.equal((await resolveAccount({...env,ACCESS_TEAM_DOMAIN:'other.cloudflareaccess.com'},member)).status,'unprovisioned');
   db.exec('UPDATE user_identities SET subject=NULL,bound_at=NULL');
-  assert.equal((await resolveAccount(env,member)).status,'identity_mismatch');
+  assert.equal((await resolveAccount(env,member,{allowBinding:false})).status,'identity_mismatch');
   assert.equal(db.prepare('SELECT subject FROM user_identities').get().subject,null);
 });
 
