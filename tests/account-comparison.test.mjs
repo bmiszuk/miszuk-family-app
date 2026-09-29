@@ -96,7 +96,7 @@ test('comparison reports only finite codes and isolates database/reporter failur
   assert.equal(await observeAccountComparison(env,member,()=>{throw new Error('logger failed');}),'administrator_match');
 });
 
-test('real signed authenticated unprovisioned requests and comparison failures retain legacy responses',async t=>{
+test('real signed authenticated requests enforce accounts before all handlers',async t=>{
   const {db,env}=fixture(t);
   const keys=await generateKeyPair('RS256');const jwk=await exportJWK(keys.publicKey);jwk.kid='test-key';jwk.alg='RS256';
   const originalFetch=globalThis.fetch;
@@ -107,13 +107,14 @@ test('real signed authenticated unprovisioned requests and comparison failures r
     const observations=[];const response=await worker.fetch(new Request(`https://family.miszuk.com/api/${path}`,{headers:{'Cf-Access-Jwt-Assertion':jwt}}),env,{waitUntil(p){observations.push(p);}});
     await Promise.all(observations);return {status:response.status,body:await response.json()};
   }
-  const before=await call('me');assert.equal(before.status,200);assert.equal(before.body.member.person.id,'p1');
-  assert.ok(!('account' in before.body.member));
-  for(const path of ['groceries','news','directory','households','dinner'])assert.equal((await call(path)).status,200,path);
+  const before=await call('me');assert.equal(before.status,403);assert.equal(before.body.code,'APPLICATION_ACCESS_DENIED');
   await provisionInitialAdministrator(env.DB,verified);
-  assert.deepEqual(await call('me'),before);
+  const active=await call('me');assert.equal(active.status,200);assert.equal(active.body.member.person.id,'p1');
+  assert.ok(!('id' in active.body.member));
+  for(const path of ['groceries','news','directory','households','dinner'])assert.equal((await call(path)).status,200,path);
+  assert.deepEqual(await call('me'),active);
   db.exec("UPDATE app_users SET status='disabled'");assert.deepEqual(await call('me'),before);
-  db.exec('DROP TABLE security_audit; DROP TABLE user_identities; DROP TABLE app_users');assert.deepEqual(await call('me'),before);
+  db.exec('DROP TABLE security_audit; DROP TABLE user_identities; DROP TABLE app_users');assert.equal((await call('me')).status,503);
 });
 
 test('D1 runtime provisioning is atomic and repeat-safe',async()=>{

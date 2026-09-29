@@ -1,4 +1,3 @@
-import {householdIdentity} from '../shared/identity.js';
 import {householdScope} from '../shared/permissions.js';
 import {bodyJson,HttpError,stringField} from '../shared/errors.js';
 import {jsonResponse} from '../shared/utils.js';
@@ -8,7 +7,7 @@ function validate(body) {
       return [stringField(body.name, 'Item', 160), stringField(body.quantity, 'Quantity', 80, false), boolField(body.done ?? false, 'Done')];
 }
 export async function handleGroceries(request,env,member,id) {
- const householdId=householdScope(await householdIdentity(env,member),'groceries');
+ const householdId=householdScope(member,'groceries');
  if(id==='import') return importGroceries(request,env,member,householdId);
  if(id==='checked' && request.method==='DELETE') {
   const now=new Date().toISOString();

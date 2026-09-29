@@ -7,9 +7,9 @@ import { sections, sectionFromHash } from './navigation.js';
 import GroceryList from '../features/groceries/GroceryList.jsx';
 import FamilyNews from '../features/chat/Chat.jsx';
 import Calendar from '../features/calendar/Calendar.jsx';
-import { api } from '../shared/client.js';
+import { api, onAccessFailure } from '../shared/client.js';
 import Icon from '../shared/ui/Icon.jsx';
-import { ErrorMessage } from '../shared/ui/Shared.jsx';
+import { ErrorMessage, NoHousehold } from '../shared/ui/Shared.jsx';
 export default function App() {
   const [section, setSection] = useState(() => sectionFromHash(window.location.hash));
   useEffect(() => {
@@ -24,11 +24,12 @@ export default function App() {
   const [member, setMember] = useState(null);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => onAccessFailure(failure => { setMember(null); setError(failure); }), []);
   useEffect(() => {
     const controller = new AbortController();
     api('me', { signal: controller.signal }).then(data => {
       if (!controller.signal.aborted) { setMember(data.member); setError(null); }
-    }).catch(failure => { if (!controller.signal.aborted) setError(failure); });
+    }).catch(failure => { if (!controller.signal.aborted && failure.name !== 'AbortError') setError(failure); });
     return () => controller.abort();
   }, [attempt]);
   return <div className="page">
@@ -38,11 +39,11 @@ export default function App() {
     </header>
     {member && <nav className="section-nav app-nav" aria-label="Family sections">{sections.map(item => <a key={item.id} href={`#${item.id}`} aria-current={section === item.id ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></a>)}</nav>}
     <main id="main" tabIndex={-1}>
-      {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
+      {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><a href="/cdn-cgi/access/logout">Sign out / Switch account</a><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
         {section === 'home' && <Home member={member} />}
-        {section === 'dinner' && <Dinner member={member} />}
+        {section === 'dinner' && (member.household ? <Dinner member={member} /> : <NoHousehold />)}
         {section === 'directory' && <Directory currentPersonId={member.person?.id} />}
-        <div className="section-view" hidden={section !== 'groceries'}><GroceryList currentPersonId={member.person?.id} householdName={member.household?.name} /></div>
+        <div className="section-view" hidden={section !== 'groceries'}>{member.household ? <GroceryList currentPersonId={member.person?.id} householdName={member.household?.name} /> : <NoHousehold />}</div>
         <div className="section-view" hidden={section !== 'calendar'}><Calendar /></div>
         <div className="section-view" hidden={section !== 'chat'}><FamilyNews currentPersonId={member.person?.id} /></div>
       </>}

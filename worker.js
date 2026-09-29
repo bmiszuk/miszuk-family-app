@@ -1,4 +1,4 @@
-import { observeAccountComparison } from './src/api/shared/accountComparison.js';
+import { requireAccount } from './src/api/shared/accountGate.js';
 import { createApiRouter } from './src/api/router.js';
 import { authenticate, checkOrigin } from './src/api/shared/auth.js';
 import { HttpError } from './src/api/shared/errors.js';
@@ -7,18 +7,17 @@ import { jsonResponse } from './src/api/shared/utils.js';
 const handleApiRequest = createApiRouter();
 
 export default {
-  async fetch(request, env, ctx) {
+  async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
       try {
-        const member = await authenticate(request, env);
+        const authenticated = await authenticate(request, env);
         checkOrigin(request, env);
-        // Background observation only; legacy identity and all policies stay authoritative.
-        if (!member.local && ctx?.waitUntil) ctx.waitUntil(observeAccountComparison(env, member));
+        const member = await requireAccount(env, authenticated);
         return await handleApiRequest(request, env, member);
       } catch (error) {
-        if (error instanceof HttpError) return jsonResponse({ error: error.message }, error.status);
+        if (error instanceof HttpError) return jsonResponse({ error: error.message, ...(error.code ? { code: error.code } : error.status === 401 ? { code: 'AUTHENTICATION_REQUIRED' } : {}) }, error.status);
         console.error('Household API failed', error instanceof Error ? error.name : 'Unknown error');
         return jsonResponse({ error: 'We could not save or load this information. Please try again.' }, 500);
       }

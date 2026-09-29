@@ -17,7 +17,7 @@ const script = output.output.find(chunk => chunk.type === 'chunk' && chunk.isEnt
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 const mf = new Miniflare({
   modules: true, script, host: '127.0.0.1', port: 5173, compatibilityDate: '2026-07-05',
-  bindings: { LOCAL_DEV: 'true', ...(sample ? {COZI_CALENDAR_URL:'https://rest.cozi.com/local-sample-only'} : {}) },
+  bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', ...(sample ? {COZI_CALENDAR_URL:'https://rest.cozi.com/local-sample-only'} : {}) },
   ...(sample ? {outboundService: async()=>new Response(sample,{headers:{'Content-Type':'text/calendar'}})} : {}), d1Databases: ['DB'], d1Persist: resolve(root, '.wrangler/portable-state'),
   serviceBindings: { ASSETS: async request => {
     let path;
@@ -36,6 +36,7 @@ try {
     const sql = (await readFile(resolve(root, 'migrations', name), 'utf8')).replace(/--[^\n]*/g, '');
     await db.batch([...migrationStatements(sql).map(value => db.prepare(value)), db.prepare('INSERT INTO preview_migrations(name) VALUES(?)').bind(name)]);
   }
+  await db.batch(migrationStatements(await readFile(resolve(root,'scripts/local-account.sql'),'utf8')).map(sql=>db.prepare(sql)));
   console.log(`Family preview: ${await mf.ready}`);
   if(sample) console.log('Cozi uses the synthetic September 2026 test feed; no remote calendar is contacted.');
   console.log('Local data only. Ctrl+C to stop. Rebuild and restart after source changes.');

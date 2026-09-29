@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import worker from '../worker.js';
+import {accountSeed,identify,localPerson} from './account-fixture.mjs';
 
 function fixture(t) {
   const db = new DatabaseSync(':memory:');
@@ -14,6 +15,8 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0005_login_identity.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0006_households_dinner.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
+  db.exec(accountSeed);
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -36,7 +39,7 @@ function fixture(t) {
     const response = await worker.fetch(new Request(`http://localhost${path}`, {
       method, headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...extra.headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    }), { DB, LOCAL_DEV: 'true', ...extra.env });
+    }), { DB, LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', ...extra.env });
     return { status: response.status, data: await response.json(), headers: response.headers };
   }
   return { db, request };
@@ -46,7 +49,6 @@ async function add(request, first_name, birth_date = '06-15') {
   const result = await request('/api/directory/people', 'POST', { first_name, last_name: 'Family', birth_date });
   assert.equal(result.status, 201, JSON.stringify(result.data)); return result.data.item;
 }
-function identify(db,person) { person.login_email='family@localhost'; db.exec('UPDATE people SET login_email=NULL'); db.prepare("UPDATE people SET login_email='family@localhost' WHERE id=?").run(person.id); }
 const link = (request, a, b, type = 'parent', anniversary_date = '') => request('/api/directory/relationships', 'POST', { person1_id: a.id, person2_id: b.id, relationship_type: type, anniversary_date });
 
 test('directory person CRUD, optional birth year, stale edits and household preservation', async t => {
@@ -59,9 +61,11 @@ test('directory person CRUD, optional birth year, stale edits and household pres
   assert.equal(updated.status,200); assert.equal(updated.data.item.version,2);
   assert.equal((await request(`/api/directory/people/${a.id}`,'PATCH',a)).status,409);
   assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:1})).status,409);
-  assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:2})).status,200);
-  assert.equal((await request('/api/directory')).data.people.length,0);
-  assert.ok(db.prepare('SELECT deleted_at FROM people WHERE id=?').get(a.id).deleted_at);
+  assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:2})).status,409);
+  identify(db,{id:localPerson});
+
+  assert.equal((await request('/api/directory')).data.people.length,2);
+  assert.equal(db.prepare('SELECT deleted_at FROM people WHERE id=?').get(a.id).deleted_at,null);
   assert.equal((await request('/api/groceries')).data.items[0].id,grocery.data.item.id);
   assert.equal(db.prepare('SELECT name FROM families WHERE id=?').get('existing').name,'Existing family');
 });
@@ -91,9 +95,10 @@ test('one marriage represents both spouses, anniversary editing and safe person 
   assert.equal((await request(`/api/directory/relationships/${r.id}`,'PATCH',{version:1,anniversary_date:'07-06'})).status,409);
   assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:1})).status,409);
   assert.equal((await request(`/api/directory/relationships/${r.id}`,'DELETE',{version:2})).status,200);
-  assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:1})).status,200);
-  assert.equal((await request('/api/directory')).data.people.length,2);
-  assert.equal((await link(request,a,c,'spouse')).status,403);
+  assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:1})).status,409);
+  assert.equal((await request('/api/directory')).data.people.length,4);
+  identify(db,c);
+  assert.equal((await link(request,a,b,'spouse')).status,403);
 });
 
 test('parent links derive both directions and reject duplicates and cycles', async t => {
@@ -126,18 +131,14 @@ test('unknown birthdays remain blank through creation and editing', async t => {
   assert.equal(invalid.status, 400);
 });
 
-test('login mapping normalizes email, rejects duplicates, preserves omissions and ignores client identity', async t => {
-  const {request}=fixture(t);
-  const a=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:' FAMILY@LOCALHOST ',birth_date:null})).data.item;
-  assert.equal(a.login_email,'family@localhost');
-  assert.equal((await request('/api/me','GET',undefined,{headers:{'Cf-Access-Authenticated-User-Email':'spoof@example.com'}})).data.member.person.id,a.id);
-  const duplicate=await request('/api/directory/people','POST',{first_name:'Other',login_email:'Family@Localhost'});
-  assert.equal(duplicate.status,409);
-  const edited=(await request(`/api/directory/people/${a.id}`,'PATCH',{first_name:'Renamed',version:1})).data.item;
-  assert.equal(edited.login_email,'family@localhost');
-  assert.equal((await request(`/api/directory/people/${a.id}`,'PATCH',{...edited,login_email:'not an email'})).status,400);
-  assert.equal((await request(`/api/directory/people/${a.id}`,'PATCH',{...edited,login_email:''})).status,200);
-  assert.equal((await request('/api/me')).data.member.person,null);
+test('legacy login email cannot be set or changed and does not control account identity',async t=>{
+ const {request,db}=fixture(t);const a=await add(request,'Mapped');identify(db,a);
+ db.prepare("UPDATE people SET login_email='legacy@example.test' WHERE id=?").run(a.id);
+ assert.equal((await request('/api/me','GET',undefined,{headers:{'Cf-Access-Authenticated-User-Email':'spoof@example.com'}})).data.member.person.id,a.id);
+ assert.equal((await request('/api/directory/people','POST',{first_name:'Other',login_email:'new@example.test'})).status,403);
+ assert.equal((await request('/api/directory/people/'+a.id,'PATCH',{...a,login_email:'new@example.test'})).status,403);
+ assert.equal((await request('/api/directory/people/'+a.id,'PATCH',{first_name:'Renamed',version:1})).status,200);
+ assert.equal(db.prepare('SELECT login_email FROM people WHERE id=?').get(a.id).login_email,'legacy@example.test');
 });
 
 test('Directory self/parent authorization, transactional creation and no creator privilege',async t=>{
@@ -182,7 +183,7 @@ test('staged Directory updates save relationships together and roll back invalid
   assert.equal((await request('/api/directory')).data.relationships.length,0);
 });
 
-test('spouses edit each other in both directions, including household/login and relationships',async t=>{
+test('spouses edit each other in both directions, including household and relationships but not login email',async t=>{
   const {request,db}=fixture(t);
   const a=await add(request,'First spouse'),b=await add(request,'Second spouse'),other=await add(request,'Unrelated');
   identify(db,a);
@@ -191,10 +192,10 @@ test('spouses edit each other in both directions, including household/login and 
   for(const [actor,target] of [[a,b],[b,a]]) {
     identify(db,actor);
     const current=db.prepare('SELECT * FROM people WHERE id=?').get(target.id);
-    const changed=await request(`/api/directory/people/${target.id}`,'PATCH',{...current,first_name:'Edited spouse',household_id:household.id,login_email:'spouse@example.com'});
+    const changed=await request(`/api/directory/people/${target.id}`,'PATCH',{...current,first_name:'Edited spouse',household_id:household.id});
     assert.equal(changed.status,200,JSON.stringify(changed.data));
     assert.equal(changed.data.item.household_id,household.id);
-    assert.equal(changed.data.item.login_email,'spouse@example.com');
+    assert.equal((await request(`/api/directory/people/${target.id}`,'PATCH',{...changed.data.item,login_email:'spouse@example.com'})).status,403);
     const r=db.prepare('SELECT * FROM relationships WHERE id=?').get(marriage.id);
     assert.equal((await request(`/api/directory/relationships/${r.id}`,'PATCH',{version:r.version,anniversary_date:'06-01'})).status,200);
     const parent=await link(request,other,target);

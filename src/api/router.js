@@ -1,5 +1,5 @@
 import {handleCozi} from './calendar/cozi.js';
-import {householdIdentity} from './shared/identity.js';
+import {publicMember} from './shared/accountGate.js';
 import {handleHouseholds} from './households/handler.js';
 import {handleDinner} from './dinner/handler.js';
 import { handleFamilies } from './legacy/families.js';
@@ -15,7 +15,7 @@ export function createApiRouter() {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/me' && request.method === 'GET') {
-      return jsonResponse({member:await householdIdentity(env,member)});
+      return jsonResponse({member:publicMember(member)});
     }
     if(url.pathname === '/api/cozi-calendar') return handleCozi(request,env);
     const householdRoute=url.pathname.match(/^\/api\/households(?:\/([^/]+))?$/);

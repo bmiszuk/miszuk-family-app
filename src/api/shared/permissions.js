@@ -21,7 +21,8 @@ export function can(user, action, resource = {}, context = {}) {
 // Scope must remain in SQL, including writes and bulk operations, not only UI checks.
 export function householdScope(user, feature) {
  if (feature !== 'groceries' && feature !== 'dinner') throw new Error('Unknown household feature');
- const id=user.household.id; // Includes the existing fallback for unassigned members.
+ const id=user?.household?.id;
+ if (!id) throw new HttpError(403,'No household assigned. Contact Bob.','HOUSEHOLD_REQUIRED');
  const action=feature==='groceries'?'grocery.access':'dinner.access';
  if (!can(user,action,{household_id:id})) throw new HttpError(403,'Not allowed.');
  return id;

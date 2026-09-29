@@ -1,7 +1,6 @@
 import { bodyJson, HttpError, stringField } from '../shared/errors.js';
 import { jsonResponse, isUuid } from '../shared/utils.js';
 import {can} from '../shared/permissions.js';
-import { householdIdentity } from '../shared/identity.js';
 import { saveDirectoryPerson } from './savePerson.js';
 import { parseFamilyDate, chicagoDate } from '../../domain/directoryDates.js';
 
@@ -12,14 +11,7 @@ function dateField(value, required = true) {
   if (parsed.year && value > chicagoDate()) throw new HttpError(400, 'A birth or wedding date cannot be in the future.');
   return value;
 }
-function loginEmail(value) {
-  if (value == null || value === '') return null;
-  if (typeof value !== 'string') throw new HttpError(400, 'Enter a valid login email.');
-  const email = value.trim().toLowerCase();
-  if (!email) return null;
-  if (email.length > 254 || !/^[^\s@]+@[^\s@]+$/.test(email)) throw new HttpError(400, 'Enter a valid login email.');
-  return email;
-}
+
 function version(body) {
   if (!Number.isSafeInteger(body.version) || body.version < 1) throw new HttpError(400, 'A record version is required.');
   return body.version;
@@ -35,7 +27,7 @@ async function directoryRequest(request, env, kind, id, member) {
   if (!['people', 'relationships'].includes(kind)) throw new HttpError(404, 'Not found.');
   if (!['POST', 'PATCH', 'DELETE'].includes(request.method) || (request.method === 'POST' ? Boolean(id) : !id)) throw new HttpError(405, 'Method not allowed.');
   const body = await bodyJson(request);
-  const identity = await householdIdentity(env,member);
+  const identity = member;
   const actor = identity.person;
   const permissions = actor ? (await db.prepare('SELECT * FROM relationships WHERE deleted_at IS NULL AND (person1_id=? OR person2_id=?)').bind(actor.id,actor.id).all()).results : [];
   const canEdit = personId => can(identity,'person.edit',{id:personId},{relationships:permissions});
@@ -53,12 +45,11 @@ async function directoryRequest(request, env, kind, id, member) {
   const now = new Date().toISOString();
   let record;
   if (request.method === 'DELETE') {
-    record = await db.prepare(`UPDATE ${kind} SET deleted_at=?, updated_at=?, version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL RETURNING *`).bind(now, now, id, version(body)).first();
+    record = await db.prepare(`UPDATE ${kind} SET deleted_at=?, updated_at=?, version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL ${kind === 'people' ? 'AND NOT EXISTS(SELECT 1 FROM app_users WHERE person_id=people.id)' : ''} RETURNING *`).bind(now, now, id, version(body)).first();
   } else if (kind === 'people') {
     const values = [stringField(body.first_name, 'First name', 100), stringField(body.last_name, 'Last name', 100, false), dateField(body.birth_date, false)];
-    let email = null;
-    if (Object.hasOwn(body, 'login_email')) email = loginEmail(body.login_email);
-    else if (id) email = (await db.prepare('SELECT login_email FROM people WHERE id=?').bind(id).first())?.login_email || null;
+    const email = id ? (await db.prepare('SELECT login_email FROM people WHERE id=?').bind(id).first())?.login_email || null : null;
+    if (Object.hasOwn(body,'login_email') && (body.login_email || null) !== email) throw new HttpError(403,'Login email is managed separately from Directory profiles.');
     values.push(email);
     const householdId=Object.hasOwn(body,'household_id') ? body.household_id || null : id ? (await db.prepare('SELECT household_id FROM people WHERE id=?').bind(id).first())?.household_id || null : null;
     if(householdId && (!isUuid(householdId)||!await db.prepare('SELECT id FROM households WHERE id=? AND deleted_at IS NULL').bind(householdId).first()))throw new HttpError(400,'Choose a valid household.');

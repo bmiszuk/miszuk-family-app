@@ -30,7 +30,8 @@ process.on('exit', stop);
 try {
   await run('node_modules/vite/bin/vite.js', ['build']);
   await run('node_modules/wrangler/bin/wrangler.js', ['d1', 'migrations', 'apply', 'family-db', '--local']);
-  const worker = start('node_modules/wrangler/bin/wrangler.js', ['dev', '--local', '--ip', '127.0.0.1', '--port', '8787', '--var', 'LOCAL_DEV:true']);
+  await run('node_modules/wrangler/bin/wrangler.js', ['d1', 'execute', 'family-db', '--local', '--file', 'scripts/local-account.sql']);
+  const worker = start('node_modules/wrangler/bin/wrangler.js', ['dev', '--local', '--ip', '127.0.0.1', '--port', '8787', '--var', 'LOCAL_DEV:true', '--var', 'ACCESS_TEAM_DOMAIN:test.cloudflareaccess.com']);
   const frontend = start('node_modules/vite/bin/vite.js', []);
   for (const child of [worker, frontend]) {
     child.on('error', error => { console.error(error.message); process.exitCode = 1; stop(); });

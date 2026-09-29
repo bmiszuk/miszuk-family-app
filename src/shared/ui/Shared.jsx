@@ -17,3 +17,5 @@ export function DeleteButton({ label, disabled, onDelete, compact = false }) {
 export function SectionHeader({ icon, title, subtitle, count }) {
   return <header className="section-header"><div className="section-title"><h2><span className="section-icon"><Icon name={icon} /></span> {title}</h2>{count !== undefined && <span className="count">{count}</span>}</div>{subtitle && <p className="muted">{subtitle}</p>}</header>;
 }
+
+export function NoHousehold() { return <section className="card"><h2>Household features</h2><p>No household assigned. Contact Bob to use Groceries and Dinner.</p></section>; }

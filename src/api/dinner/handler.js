@@ -1,10 +1,9 @@
 import {can,householdScope} from '../shared/permissions.js';
 import {bodyJson,HttpError} from '../shared/errors.js';
 import {jsonResponse,isUuid} from '../shared/utils.js';
-import {householdIdentity} from '../shared/identity.js';
 import {validDay,weekStart,addDays} from '../../domain/dinnerDates.js';
 export async function handleDinner(request,env,member,day) {
-  const identity=await householdIdentity(env,member),householdId=householdScope(identity,'dinner');
+  const identity=member,householdId=householdScope(identity,'dinner');
   if(request.method==='GET'&&!day){
     const start=new URL(request.url).searchParams.get('start')||weekStart();
     if(!validDay(start))throw new HttpError(400,'Choose a valid week.');

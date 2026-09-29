@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import worker from '../worker.js';
+import {accountSeed,identify,localPerson,defaultHousehold} from './account-fixture.mjs';
 
 function fixture(t) {
   const db = new DatabaseSync(':memory:');
@@ -14,6 +15,8 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0005_login_identity.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0006_households_dinner.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
+  db.exec(accountSeed);
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -36,7 +39,7 @@ function fixture(t) {
     const response = await worker.fetch(new Request(`http://localhost${path}`, {
       method, headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...extra.headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    }), { DB, LOCAL_DEV: 'true', ...extra.env });
+    }), { DB, LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', ...extra.env });
     return { status: response.status, data: await response.json(), headers: response.headers };
   }
   return { db, request };
@@ -45,7 +48,7 @@ function fixture(t) {
 test('additive migration preserves existing family records', t => {
   const { db } = fixture(t);
   assert.equal(db.prepare('SELECT name FROM families WHERE id=?').get('existing').name, 'Existing family');
-  assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table'").get().n, 9);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM sqlite_master WHERE type='table'").get().n, 12);
 });
 
 test('groceries persist across reads, edit by version, and soft-delete', async t => {
@@ -97,7 +100,7 @@ test('invalid import is rejected without inserting a partial list', async t => {
 
 test('news can be created, edited, and removed, with a trusted author', async t => {
   const { request } = fixture(t);
-  await request('/api/directory/people','POST',{first_name:'Author',login_email:'family@localhost'});
+  await request('/api/directory/people','POST',{first_name:'Author'});
   const { data: { item } } = await request('/api/news', 'POST', { title: 'Dinner', body: 'Sunday at home.', author_name: 'Spoofed' });
   assert.equal(item.author_name, 'Local family member');
   assert.equal((await request('/api/news')).data.items.length, 1);
@@ -134,7 +137,7 @@ test('calendar rejects impossible dates, wrong types, bad timezone and reversed 
 test('validation rejects empty names, oversized content, wrong content type, and cross-origin writes', async t => {
   const { request } = fixture(t);
   for (const body of [{ name: ' ' }, { name: 2 }, { name: 'x'.repeat(161) }, { name: 'Tea', quantity: 3 }, { name: 'Tea', done: 'true' }]) assert.equal((await request('/api/groceries', 'POST', body)).status, 400);
-  await request('/api/directory/people','POST',{first_name:'Author',login_email:'family@localhost'});
+  await request('/api/directory/people','POST',{first_name:'Author'});
   assert.equal((await request('/api/news', 'POST', { title: 'x', body: 'x'.repeat(70000) })).status, 413);
   assert.equal((await request('/api/groceries', 'POST', { name: 'Tea' }, { headers: { 'Content-Type': 'text/plain' } })).status, 415);
   assert.equal((await request('/api/groceries', 'POST', { name: 'Tea' }, { headers: { Origin: 'https://evil.example' } })).status, 403);
@@ -157,7 +160,7 @@ test('unknown endpoints and methods return predictable status codes', async t =>
 });
 
 test('requester references support add/edit/null and preserve legacy client updates', async t => {
-  const {request}=fixture(t);
+  const {request,db}=fixture(t);
   const person=(await request('/api/directory/people','POST',{first_name:'Requester',birth_date:null})).data.item;
   const item=(await request('/api/groceries','POST',{name:'Milk',requester_person_id:person.id})).data.item;
   assert.equal(item.requester_person_id,person.id);
@@ -171,7 +174,7 @@ test('requester references support add/edit/null and preserve legacy client upda
 
 test('chat sender and Home notice update the same preserved news record', async t => {
   const {request,db}=fixture(t);
-  const person=(await request('/api/directory/people','POST',{first_name:'Sender',birth_date:null,login_email:'family@localhost'})).data.item;
+  const person=(await request('/api/directory/people','POST',{first_name:'Sender',birth_date:null})).data.item;identify(db,person);
   const legacy=(await request('/api/news','POST',{title:'Old headline',body:'Old news body'})).data.item;
   assert.equal(legacy.home_notice,false);assert.equal(legacy.sender_person_id,person.id);
   const post=(await request('/api/news','POST',{body:'Come to dinner',sender_person_id:person.id,home_notice:true})).data.item;
@@ -190,7 +193,7 @@ test('households isolate groceries, ignore client scope, and preserve default it
  const {request,db}=fixture(t);
  const legacy=(await request('/api/groceries','POST',{name:'Default item'})).data.item;
  const home=(await request('/api/households','POST',{name:'Other household'})).data.item;
- const person=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:'family@localhost',household_id:home.id})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Mapped',household_id:home.id})).data.item;identify(db,person);
  assert.equal((await request('/api/me')).data.member.household.id,home.id);
  assert.equal((await request('/api/groceries')).data.items.length,0);
  const created=(await request('/api/groceries','POST',{name:'Our item',household_id:legacy.household_id})).data.item;
@@ -199,14 +202,15 @@ test('households isolate groceries, ignore client scope, and preserve default it
  assert.equal((await request(`/api/groceries/${legacy.id}`,'DELETE',{version:1})).status,409);
  assert.equal(db.prepare('SELECT name FROM grocery_items WHERE id=?').get(legacy.id).name,'Default item');
  await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
- assert.equal((await request('/api/groceries')).data.items[0].id,legacy.id);
+ assert.equal((await request('/api/groceries')).status,403);
 });
 
 test('dinner validates household membership, versions, dates and clearing',async t=>{
- const {request}=fixture(t);
- assert.equal((await request('/api/dinner/2026-09-08','PUT',{person_id:null,version:0})).status,409);
+ const {request,db}=fixture(t);
+ db.prepare('UPDATE people SET household_id=NULL WHERE id=?').run(localPerson);
+ assert.equal((await request('/api/dinner/2026-09-08','PUT',{person_id:null,version:0})).status,403);
  const home=(await request('/api/households','POST',{name:'Dinner household'})).data.item;
- const person=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:'family@localhost',household_id:home.id})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Mapped',household_id:home.id})).data.item;identify(db,person);
  const other=(await request('/api/directory/people','POST',{first_name:'Other'})).data.item;
  const body={person_id:person.id,version:0};
  assert.equal((await request('/api/dinner/2026-09-08','PUT',body)).status,200);
@@ -218,20 +222,22 @@ test('dinner validates household membership, versions, dates and clearing',async
  assert.equal((await request('/api/dinner?start=2026-09-07')).data.items[0].person_id,null);
  assert.equal((await request('/api/dinner?start=2026-09-14')).data.items.length,0);
  await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
- assert.equal((await request('/api/dinner?start=2026-09-07')).data.items.length,0);
+ assert.equal((await request('/api/dinner?start=2026-09-07')).status,403);
 });
 
 test('chat uses trusted mapped sender and restricts ownership',async t=>{
  const {request,db}=fixture(t);
+ db.exec("UPDATE app_users SET status='disabled'");
  assert.equal((await request('/api/news','POST',{body:'Denied',sender_person_id:crypto.randomUUID()})).status,403);
- const a=(await request('/api/directory/people','POST',{first_name:'A',login_email:'family@localhost'})).data.item;
+ db.exec("UPDATE app_users SET status='active'");
+ const a=(await request('/api/directory/people','POST',{first_name:'A'})).data.item;identify(db,a);
  const b=(await request('/api/directory/people','POST',{first_name:'B'})).data.item;
  const post=(await request('/api/news','POST',{body:'Owned',sender_person_id:b.id,home_notice:true})).data.item;
  assert.equal(post.sender_person_id,a.id);
  const edited=await request(`/api/news/${post.id}`,'PATCH',{version:1,body:'Edited',sender_person_id:b.id});
  assert.equal(edited.data.item.sender_person_id,a.id);
  db.prepare('UPDATE people SET login_email=NULL WHERE id=?').run(a.id);
- db.prepare("UPDATE people SET login_email='family@localhost' WHERE id=?").run(b.id);
+ identify(db,b);
  for(const method of ['PATCH','DELETE'])assert.equal((await request(`/api/news/${post.id}`,method,{version:2,body:'Denied',home_notice:false})).status,403);
  assert.equal((await request('/api/news')).data.items[0].home_notice,true);
 });
@@ -241,9 +247,9 @@ test('Delete checked is household-scoped and soft-deletes only checked items',as
  const keep=(await request('/api/groceries','POST',{name:'Needed'})).data.item;
  const checked=(await request('/api/groceries','POST',{name:'Checked',done:true})).data.item;
  const h=(await request('/api/households','POST',{name:'Other'})).data.item;
- const person=(await request('/api/directory/people','POST',{first_name:'Mapped',login_email:'family@localhost',household_id:h.id})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Mapped',household_id:h.id})).data.item;identify(db,person);
  const other=(await request('/api/groceries','POST',{name:'Other checked',done:true})).data.item;
- await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
+ await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:defaultHousehold});
  assert.equal((await request('/api/groceries/checked','DELETE')).status,200);
  assert.deepEqual((await request('/api/groceries')).data.items.map(x=>x.id),[keep.id]);
  assert.ok(db.prepare('SELECT deleted_at FROM grocery_items WHERE id=?').get(checked.id).deleted_at);
@@ -254,7 +260,7 @@ test('Delete checked is household-scoped and soft-deletes only checked items',as
 test('empty household retirement preserves data and assigned households are protected',async t=>{
  const {request,db}=fixture(t);
  const home=(await request('/api/households','POST',{name:'Retire me'})).data.item;
- const person=(await request('/api/directory/people','POST',{first_name:'Member',login_email:'family@localhost',household_id:home.id})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Member',household_id:home.id})).data.item;identify(db,person);
  const grocery=(await request('/api/groceries','POST',{name:'Keep stored'})).data.item;
  assert.equal((await request(`/api/households/${home.id}`,'DELETE')).status,409);
  await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
@@ -263,12 +269,12 @@ test('empty household retirement preserves data and assigned households are prot
  assert.equal(db.prepare('SELECT name FROM grocery_items WHERE id=?').get(grocery.id).name,'Keep stored');
  assert.equal((await request('/api/households')).data.items.some(h=>h.id===home.id),false);
  assert.equal((await request('/api/directory/people','POST',{first_name:'Bad household',household_id:home.id})).status,400);
- const fallback=(await request('/api/me')).data.member.household;
- assert.equal((await request(`/api/households/${fallback.id}`,'DELETE')).status,409);
+ assert.equal((await request('/api/me')).data.member.household,null);
+ assert.equal((await request(`/api/households/${defaultHousehold}`,'DELETE')).status,409);
 });
 
 test('legacy families and people endpoints retain their existing response contracts',async t=>{
- const {request}=fixture(t);
+ const {request,db}=fixture(t);
  const family=await request('/api/families','POST',{name:'Legacy family'});
  assert.equal(family.status,201);
  const list=await request('/api/families');

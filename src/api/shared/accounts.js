@@ -1,5 +1,4 @@
-// Comparison-only resolver. Callers must supply the identity verified by authenticate().
-// Approved identities may bind on first login; legacy authorization stays authoritative.
+// Callers must supply only the identity verified by authenticate().
 export async function resolveAccount(env, member, { allowBinding = true } = {}) {
   const domain = env.ACCESS_TEAM_DOMAIN;
   if (!domain || !member.id || !member.email) return { status: 'unavailable' };
@@ -31,11 +30,12 @@ export async function resolveAccount(env, member, { allowBinding = true } = {}) 
   }
   if (row.subject !== member.id || !row.bound_at) return { status: 'identity_mismatch' };
   if (row.account_status !== 'active') return { status: row.account_status };
-  if (row.household_id && !row.active_household_id) return { status: 'household_inactive' };
+
   return {
     status: 'resolved',
+    diagnostic: row.household_id && !row.active_household_id ? 'household_inactive' : undefined,
     account: { id: row.user_id, role: row.role },
-    person: { id: row.linked_person_id, first_name: row.first_name, last_name: row.last_name, household_id: row.household_id },
+    person: { id: row.linked_person_id, first_name: row.first_name, last_name: row.last_name, household_id: row.active_household_id || null },
     household: row.active_household_id ? { id: row.active_household_id, name: row.household_name } : null,
   };
 }
