@@ -1,3 +1,4 @@
+import {handleAdmin} from './admin/handler.js';
 import {handleCozi} from './calendar/cozi.js';
 import {publicMember} from './shared/accountGate.js';
 import {handleHouseholds} from './households/handler.js';
@@ -17,6 +18,7 @@ export function createApiRouter() {
     if (url.pathname === '/api/me' && request.method === 'GET') {
       return jsonResponse({member:publicMember(member)});
     }
+    if(url.pathname.startsWith('/api/admin/')) return handleAdmin(request,env,member);
     if(url.pathname === '/api/cozi-calendar') return handleCozi(request,env);
     const householdRoute=url.pathname.match(/^\/api\/households(?:\/([^/]+))?$/);
     if(householdRoute)return handleHouseholds(request,env,householdRoute[1],member);

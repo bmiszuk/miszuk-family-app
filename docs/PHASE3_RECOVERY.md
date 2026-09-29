@@ -27,3 +27,7 @@ The local development scripts seed only a synthetic, already-bound localhost acc
 Step 1 restricts household and relationship mutations to Administrators. Its rollback checkpoint is `pre-users-phase4-step1-2026-09-29` (`8470b92`), for source comparison only: deploying it would reopen Member household/relationship mutations. Do not use it as a security-preserving rollback.
 
 The operator has prepared and tested `phase4-step1-account-recovery-worker.mjs`, its SHA-256 file, and the private `deploy-phase4-step1-recovery.mjs --deploy-maintenance` helper. These use the same account-aware maintenance source and binding-preserving deployment procedure above. Deploy maintenance if needed, then repair forward with Step 1 enforcement intact. Preserve current D1 data and audit records; no migration or database restore is required for this release.
+
+## Phase 4 Step 2 recovery
+
+The Step 2 checkpoint is `pre-users-phase4-step2-2026-09-29` (`eb4f2bc`). This previous release preserves the Phase 3 account boundary and Step 1 privileged-write enforcement, so a matched frontend/backend rollback is security-preserving. No migration or account mutation is introduced. The existing tested private Step 1 account-aware maintenance bundle remains the fail-closed emergency option; preserve data, bindings and audits and repair forward.

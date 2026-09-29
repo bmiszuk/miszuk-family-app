@@ -1,0 +1,9 @@
+.application-access { margin-block: .75rem; }
+.access-fields { display: grid; grid-template-columns: minmax(7rem, 1fr) minmax(0, 2fr); gap: .3rem .7rem; margin-block: .6rem; }
+.access-fields dt { font-size: .85rem; opacity: .8; }
+.access-fields dd { margin: 0; overflow-wrap: anywhere; }
+.access-roster, .access-audit { list-style: none; padding: 0; margin: .5rem 0; }
+.access-roster { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap: .4rem; }
+.access-roster .person-select { width: 100%; }
+.access-audit li { padding: .4rem 0; }
+.access-audit small { display: block; opacity: .75; }

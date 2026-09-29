@@ -7,6 +7,8 @@ export function can(user, action, resource = {}, context = {}) {
  switch (action) {
   case 'directory.profile.edit':
   case 'person.edit': return canEditDirectoryPerson(user.person?.id,resource.id,context.relationships || []);
+  case 'account.read':
+  case 'securityAudit.read':
   case 'directory.profile.editAny':
   case 'directory.anniversary.editAny':
   case 'directory.household.assign':

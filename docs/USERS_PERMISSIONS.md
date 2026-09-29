@@ -1,6 +1,6 @@
 # Users and Permissions Design
 
-Implementation status: Phase 3 account enforcement and Phase 4 Step 1 Directory/Household restrictions are implemented. Step 1 adds explicit Administrator profile/anniversary corrections and transactional security audits; account administration UI/APIs, role/identity changes, moderation and cross-household overrides remain deferred. Household PATCH/DELETE requires `expected_name` for guarded concurrency. Member person-deletion eligibility is unchanged; no Administrator delete-any override is introduced in Step 1.
+Implementation status: Phase 3 account enforcement and Phase 4 Step 1 Directory/Household restrictions and Step 2 read-only Application Access views are implemented. Step 1 adds explicit Administrator profile/anniversary corrections and transactional security audits; account mutation UI/APIs, role/identity changes, moderation and cross-household overrides remain deferred. Household PATCH/DELETE requires `expected_name` for guarded concurrency. Member person-deletion eligibility is unchanged; no Administrator delete-any override is introduced in Step 1.
 
 Design status: agreed target for staged implementation.  Follow [ARCHITECTURE.md](../ARCHITECTURE.md); no broad refactor or enterprise RBAC framework is required.
 
@@ -84,6 +84,8 @@ Directory person creation/deletion and legacy/local-calendar behavior above reta
 Field-level checks apply to changes, not merely to which endpoint was called. Inspect nested person saves so ordinary profile edits cannot smuggle a household or relationship change. Reject unauthorized changes atomically; unchanged submitted values do not confer authority. UI must remove unavailable controls and obtain updated capabilities; API authorization remains mandatory.
 
 Cross-household administration must explicitly identify and authorize one target household. Define separate known override actions for the grocery/dinner operations above, audit writes, and preserve SQL scope for item lookups, imports, and bulk deletion. Never implement `administrator → unrestricted SQL`. The exact transport/UI for selecting the target is implementation detail, not a new existing endpoint.
+
+Implemented read-only routes: `GET /api/admin/accounts` (optional `person_id` filter), `GET /api/admin/accounts/:id`, and `GET /api/admin/security-audit`. Account reads require `account.read`; audit reads require `securityAudit.read`, both Administrator-only. Lists accept `limit` (default 20, maximum 50) and `offset` (0–100000), returning `next_offset`. Audit pages sort newest-first by timestamp/ID; concurrent new events may shift offset pages, so this is a recent-changes view, not an audit export. Only display fields are serialized; raw audit details/labels and security identity identifiers are excluded. Reads do not create audit events. No mutations exist in Step 2.
 
 Future dedicated account administration routes will require `account.manage`; audit inspection requires `securityAudit.read`, both Administrator-only. Define their exact methods/paths during implementation; do not imply that these APIs already exist. No current API may provision accounts through a Directory email write.
 
