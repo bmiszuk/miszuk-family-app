@@ -15,7 +15,8 @@ test('central policies preserve relationship permissions without cross-feature g
  assert.equal(can(a,'grocery.access',{household_id:'other'}),false);
  assert.equal(can(a,'vehicle.edit',{id:'b'},context),false);
  assert.equal(can(null,'household.manage'),false);
- assert.equal(can({email:'external@example.net'},'household.manage'),true);
+ assert.equal(can({account:{role:'member'}},'household.create'),false);
+ assert.equal(can({account:{role:'administrator'}},'household.create'),true);
  assert.equal(can({person:null},'chat.post'),false);
  assert.equal(can(b,'dinner.assign'),false);
  assert.equal(can(a,'dinner.assign'),true);

@@ -22,34 +22,33 @@ function formDate(form, prefix) {
   if (!month && !day && !year) return '';
   return `${year ? `${year}-` : ''}${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
-function PersonForm({person,relationships,permissionRelationships,people,currentPersonId,busy,onSave,onCancel,households}) {
+function PersonForm({person,relationships,permissionRelationships,people,currentPersonId,busy,onSave,onCancel,households,administrator}) {
   const self=person?.id || 'self';
   const [links,setLinks]=useState(relationships.filter(r=>['parent','spouse'].includes(r.relationship_type)));
   const [type,setType]=useState('parent'),[other,setOther]=useState('');
-  const canEdit=id=>canEditDirectoryPerson(currentPersonId,id,permissionRelationships);
+  const canEdit=id=>administrator || canEditDirectoryPerson(currentPersonId,id,permissionRelationships);
   const allowed=r=>!person || (r.relationship_type==='parent'?canEdit(r.person2_id):canEdit(r.person1_id)||canEdit(r.person2_id));
   return <form className="stack-form editor" onSubmit={event=>{
     event.preventDefault();const form=new FormData(event.currentTarget);
-    void onSave({first_name:form.get('first_name'),last_name:form.get('last_name'),birth_date:formDate(form,'birth'),household_id:form.get('household_id')||null,relationship_versions:relationships.map(r=>r.id+':'+r.version).sort(),relationships:links.map(r=>({...r,anniversary_date:r.relationship_type==='spouse'?formDate(form,'wedding'+(r.id||r.draftId)):null}))});
+    void onSave({first_name:form.get('first_name'),last_name:form.get('last_name'),birth_date:formDate(form,'birth'),...(administrator?{household_id:form.get('household_id')||null}:{}),relationship_versions:relationships.map(r=>r.id+':'+r.version).sort(),relationships:links.map(r=>({...r,anniversary_date:r.relationship_type==='spouse'?formDate(form,'wedding'+(r.id||r.draftId)):null}))});
   }}><h3>{person?'Edit person':'Add a person'}</h3><fieldset disabled={busy} className="plain-fields">
     <label>First name<input name="first_name" required maxLength={100} defaultValue={person?.first_name||''}/></label>
     <label>Last name<input name="last_name" maxLength={100} defaultValue={person?.last_name||''}/></label>
-    <label>Household (optional)<select name="household_id" defaultValue={person?.household_id||''}><option value="">Not assigned</option>{households.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+    {administrator && <fieldset><legend>Administrator · Household</legend><label>Household (optional)<select name="household_id" defaultValue={person?.household_id||''}><option value="">Not assigned</option>{households.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label></fieldset>}
     <DateFields value={person?.birth_date} prefix="birth" title="Birthday" optional/>
-    <h3>Relationships</h3>
+    <h3>{administrator?'Administrator · Relationships':'Relationships'}</h3>
     {links.map((r,i)=>{const otherId=r.person1_id===self?r.person2_id:r.person1_id;return <div className="relationship-draft" key={r.id||r.draftId}>
       <span>{r.relationship_type==='spouse'?'Spouse':r.person2_id===self?'Parent':'Child'}: {fullName(people.find(p=>p.id===otherId))}</span>
-      {allowed(r)&&<button type="button" className="text-button danger" onClick={()=>setLinks(links.filter((_,j)=>j!==i))}>Remove relationship</button>}
-      {r.relationship_type==='spouse'&&<DateFields value={r.anniversary_date} prefix={'wedding'+(r.id||r.draftId)} title="Wedding anniversary" optional/>}
+      {administrator&&<button type="button" className="text-button danger" onClick={()=>setLinks(links.filter((_,j)=>j!==i))}>Remove relationship</button>}
+      {r.relationship_type==='spouse'&&allowed(r)&&<DateFields value={r.anniversary_date} prefix={'wedding'+(r.id||r.draftId)} title="Wedding anniversary" optional/>}
     </div>})}
-    <div className="inline-form"><label>Relationship<select value={type} onChange={e=>setType(e.target.value)}><option value="parent">Parent</option><option value="spouse">Spouse</option>{person&&<option value="child">Child</option>}</select></label>
+    {administrator && <div className="inline-form"><label>Relationship<select value={type} onChange={e=>setType(e.target.value)}><option value="parent">Parent</option><option value="spouse">Spouse</option>{person&&<option value="child">Child</option>}</select></label>
     <label>Family member<select value={other} onChange={e=>setOther(e.target.value)}><option value="">Choose a person</option>{people.filter(p=>p.id!==self&&(type!=='child'||canEdit(p.id))).map(p=><option key={p.id} value={p.id}>{fullName(p)}</option>)}</select></label>
-    <button type="button" disabled={!other} onClick={()=>{setLinks([...links,{draftId:crypto.randomUUID(),relationship_type:type==='spouse'?'spouse':'parent',person1_id:type==='parent'?other:self,person2_id:type==='parent'?self:other,anniversary_date:null}]);setOther('');}}>Add relationship</button></div>
-    {person&&<p className="muted">To link a child you cannot edit, their entry must identify you as a parent first.</p>}
-  </fieldset><p className="muted">Changes are saved together. Reload after changing your login email or household.</p>
+    <button type="button" disabled={!other} onClick={()=>{setLinks([...links,{draftId:crypto.randomUUID(),relationship_type:type==='spouse'?'spouse':'parent',person1_id:type==='parent'?other:self,person2_id:type==='parent'?self:other,anniversary_date:null}]);setOther('');}}>Add relationship</button></div>}
+  </fieldset><p className="muted">Changes are saved together.</p>
   <div className="actions"><button disabled={busy}>Save</button><button type="button" className="quiet" disabled={busy} onClick={onCancel}>Cancel</button></div></form>;
 }
-export default function Directory({currentPersonId}) {
+export default function Directory({currentPersonId,administrator=false}) {
   const directory = useDirectory();
   const households = useCollection('households');
   const action = useAction(directory.refresh);
@@ -59,15 +58,15 @@ export default function Directory({currentPersonId}) {
   const people = directory.data?.people || [], relationships = directory.data?.relationships || [];
   const selected = people.find(person => person.id === selectedId);
   const related = relationships.filter(item => item.person1_id === selectedId || item.person2_id === selectedId);
-  const canEdit = canEditDirectoryPerson(currentPersonId,selected?.id,relationships);
+  const canEdit = administrator || canEditDirectoryPerson(currentPersonId,selected?.id,relationships);
   const matching = people.filter(person => fullName(person).toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
   const mutate = (path, method, body, notice) => action.run(() => api(`directory/${path}`, { method, body }), notice);
   return <section className="directory-view" aria-label="Family Directory">
     <SectionHeader icon="directory" title="Family Directory" subtitle="The people who make this family ours." count={people.length} />
-    <HouseholdManager collection={households} people={people} />
+    {administrator && <HouseholdManager collection={households} people={people} />}
     <div className="directory-toolbar"><label>Find a person<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search first or last name" /></label><button disabled={Boolean(editor) || action.busy} onClick={() => setEditor({links:[]})}>Add person</button><button className="quiet" disabled={action.busy} onClick={directory.refresh}>Refresh directory</button></div>
     <ErrorMessage error={action.error || directory.error} /><p className="save-status" role="status">{action.busy ? 'Saving…' : action.notice}</p>
-    {editor && households.items && <PersonForm permissionRelationships={relationships} people={people} relationships={editor.links} currentPersonId={currentPersonId} households={households.items || []} key={editor.id || 'new'} person={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
+    {editor && households.items && <PersonForm administrator={administrator} permissionRelationships={relationships} people={people} relationships={editor.links} currentPersonId={currentPersonId} households={households.items || []} key={editor.id || 'new'} person={editor.id ? editor : null} busy={action.busy} onCancel={() => setEditor(null)} onSave={async values => {
       if (await mutate(editor.id ? `people/${editor.id}` : 'people', editor.id ? 'PATCH' : 'POST', { ...values, ...(editor.id ? { version: editor.version } : {}) }, 'Person saved.')) setEditor(null);
     }} />}
     {!directory.data && !directory.error && <p role="status">Loading directory…</p>}
@@ -80,7 +79,7 @@ export default function Directory({currentPersonId}) {
       <button className="quiet directory-back" onClick={() => setSelectedId(null)}>All family members</button>
       <h2>{fullName(selected)}</h2><p>Birthday · {familyDateLabel(selected.birth_date)}</p>
       <p>Household · {households.items?.find(h=>h.id===selected.household_id)?.name || 'Not assigned'}</p><p>Legacy email · {selected.login_email || 'Not assigned'}</p>
-      {canEdit && <div className="actions"><button className="quiet" disabled={Boolean(editor) || action.busy} onClick={() => setEditor({...selected,links:related})}>Edit person</button><DeleteButton label={fullName(selected)} disabled={related.length > 0 || Boolean(editor) || action.busy} onDelete={async () => { const saved = await mutate(`people/${selected.id}`, 'DELETE', { version: selected.version }, 'Person removed.'); if (saved) setSelectedId(null); return saved; }} /></div>}
+      {canEdit && <div className="actions"><button className="quiet" disabled={Boolean(editor) || action.busy} onClick={() => setEditor({...selected,links:related})}>Edit person</button><DeleteButton label={fullName(selected)} disabled={!canEditDirectoryPerson(currentPersonId,selected?.id,relationships) || related.length > 0 || Boolean(editor) || action.busy} onDelete={async () => { const saved = await mutate(`people/${selected.id}`, 'DELETE', { version: selected.version }, 'Person removed.'); if (saved) setSelectedId(null); return saved; }} /></div>}
       <h3>Relationships</h3>
       {!related.length && <p className="muted">No relationships assigned.</p>}
       <ul className="relationship-list">{related.map(relationship => {

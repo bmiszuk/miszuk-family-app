@@ -190,7 +190,7 @@ test('chat sender and Home notice update the same preserved news record', async 
 });
 
 test('households isolate groceries, ignore client scope, and preserve default items',async t=>{
- const {request,db}=fixture(t);
+ const {request,db}=fixture(t);db.exec("UPDATE app_users SET role='administrator'");
  const legacy=(await request('/api/groceries','POST',{name:'Default item'})).data.item;
  const home=(await request('/api/households','POST',{name:'Other household'})).data.item;
  const person=(await request('/api/directory/people','POST',{first_name:'Mapped',household_id:home.id})).data.item;identify(db,person);
@@ -206,7 +206,7 @@ test('households isolate groceries, ignore client scope, and preserve default it
 });
 
 test('dinner validates household membership, versions, dates and clearing',async t=>{
- const {request,db}=fixture(t);
+ const {request,db}=fixture(t);db.exec("UPDATE app_users SET role='administrator'");
  db.prepare('UPDATE people SET household_id=NULL WHERE id=?').run(localPerson);
  assert.equal((await request('/api/dinner/2026-09-08','PUT',{person_id:null,version:0})).status,403);
  const home=(await request('/api/households','POST',{name:'Dinner household'})).data.item;
@@ -243,7 +243,7 @@ test('chat uses trusted mapped sender and restricts ownership',async t=>{
 });
 
 test('Delete checked is household-scoped and soft-deletes only checked items',async t=>{
- const {request,db}=fixture(t);
+ const {request,db}=fixture(t);db.exec("UPDATE app_users SET role='administrator'");
  const keep=(await request('/api/groceries','POST',{name:'Needed'})).data.item;
  const checked=(await request('/api/groceries','POST',{name:'Checked',done:true})).data.item;
  const h=(await request('/api/households','POST',{name:'Other'})).data.item;
@@ -258,19 +258,19 @@ test('Delete checked is household-scoped and soft-deletes only checked items',as
 });
 
 test('empty household retirement preserves data and assigned households are protected',async t=>{
- const {request,db}=fixture(t);
+ const {request,db}=fixture(t);db.exec("UPDATE app_users SET role='administrator'");
  const home=(await request('/api/households','POST',{name:'Retire me'})).data.item;
  const person=(await request('/api/directory/people','POST',{first_name:'Member',household_id:home.id})).data.item;identify(db,person);
  const grocery=(await request('/api/groceries','POST',{name:'Keep stored'})).data.item;
- assert.equal((await request(`/api/households/${home.id}`,'DELETE')).status,409);
+ assert.equal((await request(`/api/households/${home.id}`,'DELETE',{expected_name:home.name})).status,409);
  await request(`/api/directory/people/${person.id}`,'PATCH',{...person,household_id:null});
- assert.equal((await request(`/api/households/${home.id}`,'DELETE')).status,200);
+ assert.equal((await request(`/api/households/${home.id}`,'DELETE',{expected_name:home.name})).status,200);
  assert.ok(db.prepare('SELECT deleted_at FROM households WHERE id=?').get(home.id).deleted_at);
  assert.equal(db.prepare('SELECT name FROM grocery_items WHERE id=?').get(grocery.id).name,'Keep stored');
  assert.equal((await request('/api/households')).data.items.some(h=>h.id===home.id),false);
  assert.equal((await request('/api/directory/people','POST',{first_name:'Bad household',household_id:home.id})).status,400);
  assert.equal((await request('/api/me')).data.member.household,null);
- assert.equal((await request(`/api/households/${defaultHousehold}`,'DELETE')).status,409);
+ assert.equal((await request(`/api/households/${defaultHousehold}`,'DELETE',{expected_name:'Default household'})).status,409);
 });
 
 test('legacy families and people endpoints retain their existing response contracts',async t=>{

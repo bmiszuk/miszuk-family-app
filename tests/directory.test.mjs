@@ -71,7 +71,7 @@ test('directory person CRUD, optional birth year, stale edits and household pres
 });
 
 test('directory rejects invalid birthdays and self or missing relationships', async t => {
-  const {request,db} = fixture(t);
+  const {request,db} = fixture(t);db.exec("UPDATE app_users SET role='administrator'");
   for (const birth_date of ['02-30','2023-02-29','13-01','2000-00-01','3000-01-01']) {
     assert.equal((await request('/api/directory/people','POST',{first_name:'Bad',last_name:'Date',birth_date})).status,400);
   }
@@ -82,7 +82,7 @@ test('directory rejects invalid birthdays and self or missing relationships', as
 });
 
 test('one marriage represents both spouses, anniversary editing and safe person deletion', async t => {
-  const {request,db} = fixture(t);
+  const {request,db} = fixture(t);db.exec("UPDATE app_users SET role='administrator'");
   const a = await add(request,'Alex'), b = await add(request,'Sam'), c = await add(request,'Pat');
   identify(db,a);
   const marriage = await link(request,a,b,'spouse','2005-07-04');
@@ -97,12 +97,12 @@ test('one marriage represents both spouses, anniversary editing and safe person 
   assert.equal((await request(`/api/directory/relationships/${r.id}`,'DELETE',{version:2})).status,200);
   assert.equal((await request(`/api/directory/people/${a.id}`,'DELETE',{version:1})).status,409);
   assert.equal((await request('/api/directory')).data.people.length,4);
-  identify(db,c);
+  identify(db,c);db.exec("UPDATE app_users SET role='member'");
   assert.equal((await link(request,a,b,'spouse')).status,403);
 });
 
 test('parent links derive both directions and reject duplicates and cycles', async t => {
-  const {request,db} = fixture(t);
+  const {request,db} = fixture(t);db.exec("UPDATE app_users SET role='administrator'");
   const a = await add(request,'Grandparent'), b = await add(request,'Parent'), c = await add(request,'Child');
   identify(db,b);
   assert.equal((await link(request,a,b)).status,201);
@@ -145,8 +145,10 @@ test('Directory self/parent authorization, transactional creation and no creator
   const {request,db}=fixture(t);
   const actor=await add(request,'Actor');identify(db,actor);
   const spouse=await add(request,'Spouse');
+  db.exec("UPDATE app_users SET role='administrator'");
   const childResult=await request('/api/directory/people','POST',{first_name:'Adult child',birth_date:'1980-01-01',relationships:[{relationship_type:'parent',person1_id:actor.id,person2_id:'self'},{relationship_type:'spouse',person1_id:'self',person2_id:spouse.id}]});
   assert.equal(childResult.status,201,JSON.stringify(childResult.data));
+  db.exec("UPDATE app_users SET role='member'");
   const child=childResult.data.item;
   assert.equal((await request(`/api/directory/people/${child.id}`,'PATCH',{...child,first_name:'Edited adult child'})).status,200);
   assert.equal((await request(`/api/directory/people/${actor.id}`,'PATCH',{...actor,first_name:'Self'})).status,200);
@@ -161,7 +163,7 @@ test('Directory self/parent authorization, transactional creation and no creator
   assert.equal((await request(`/api/directory/relationships/${marriage.id}`,'PATCH',{version:1,anniversary_date:'01-01'})).status,403);
   const count=(await request('/api/directory')).data.people.length;
   const failed=await request('/api/directory/people','POST',{first_name:'Must roll back',relationships:[{relationship_type:'parent',person1_id:actor.id,person2_id:'self'},{relationship_type:'spouse',person1_id:'self',person2_id:spouse.id}]});
-  assert.equal(failed.status,409);
+  assert.equal(failed.status,403);
   assert.equal((await request('/api/directory')).data.people.length,count);
   assert.equal((await request('/api/directory')).data.relationships.length,2);
   const created=await add(request,'Created without rights');
@@ -171,7 +173,7 @@ test('Directory self/parent authorization, transactional creation and no creator
 });
 
 test('staged Directory updates save relationships together and roll back invalid links',async t=>{
-  const {request,db}=fixture(t);const a=await add(request,'Self');identify(db,a);const b=await add(request,'Spouse');
+  const {request,db}=fixture(t);db.exec("UPDATE app_users SET role='administrator'");const a=await add(request,'Self');identify(db,a);const b=await add(request,'Spouse');
   const saved=await request(`/api/directory/people/${a.id}`,'PATCH',{...a,first_name:'Updated',relationship_versions:[],relationships:[{relationship_type:'spouse',person1_id:a.id,person2_id:b.id,anniversary_date:'05-01'}]});
   assert.equal(saved.status,200,JSON.stringify(saved.data));
   const current=saved.data.item;
@@ -183,29 +185,29 @@ test('staged Directory updates save relationships together and roll back invalid
   assert.equal((await request('/api/directory')).data.relationships.length,0);
 });
 
-test('spouses edit each other in both directions, including household and relationships but not login email',async t=>{
+test('spouses edit profiles and anniversaries in both directions but cannot manage access fields',async t=>{
   const {request,db}=fixture(t);
   const a=await add(request,'First spouse'),b=await add(request,'Second spouse'),other=await add(request,'Unrelated');
   identify(db,a);
+  db.exec("UPDATE app_users SET role='administrator'");
   const marriage=(await link(request,a,b,'spouse')).data.item;
   const household=(await request('/api/households','POST',{name:'Spouse Household'})).data.item;
+  db.exec("UPDATE app_users SET role='member'");
   for(const [actor,target] of [[a,b],[b,a]]) {
     identify(db,actor);
     const current=db.prepare('SELECT * FROM people WHERE id=?').get(target.id);
-    const changed=await request(`/api/directory/people/${target.id}`,'PATCH',{...current,first_name:'Edited spouse',household_id:household.id});
+    const changed=await request(`/api/directory/people/${target.id}`,'PATCH',{...current,first_name:'Edited spouse'});
     assert.equal(changed.status,200,JSON.stringify(changed.data));
-    assert.equal(changed.data.item.household_id,household.id);
+    assert.equal((await request(`/api/directory/people/${target.id}`,'PATCH',{...changed.data.item,household_id:household.id})).status,403);
     assert.equal((await request(`/api/directory/people/${target.id}`,'PATCH',{...changed.data.item,login_email:'spouse@example.com'})).status,403);
     const r=db.prepare('SELECT * FROM relationships WHERE id=?').get(marriage.id);
     assert.equal((await request(`/api/directory/relationships/${r.id}`,'PATCH',{version:r.version,anniversary_date:'06-01'})).status,200);
     const parent=await link(request,other,target);
-    assert.equal(parent.status,201);
-    assert.equal((await request(`/api/directory/relationships/${parent.data.item.id}`,'DELETE',{version:1})).status,200);
+    assert.equal(parent.status,403);
     assert.equal((await request(`/api/directory/people/${other.id}`,'PATCH',{...other,first_name:'Denied'})).status,403);
   }
   identify(db,other);
   assert.equal((await request(`/api/directory/relationships/${marriage.id}`,'PATCH',{version:3,anniversary_date:'07-01'})).status,403);
   identify(db,a);
-  assert.equal((await request(`/api/directory/relationships/${marriage.id}`,'DELETE',{version:3})).status,200);
-  assert.equal((await request(`/api/directory/people/${b.id}`,'PATCH',{...b,version:2})).status,403);
+  assert.equal((await request(`/api/directory/relationships/${marriage.id}`,'DELETE',{version:3})).status,403);
 });

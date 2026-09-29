@@ -1,11 +1,20 @@
 import {HttpError} from './errors.js';
 import {canEditDirectoryPerson} from '../../domain/directoryPermissions.js';
-// The caller is always authenticated by the Worker. No roles or email-domain policy here.
+// The Worker supplies an active account. Administrator overrides are explicitly named.
 // Actions remain feature-specific: Directory relationships grant no rights in other modules.
 export function can(user, action, resource = {}, context = {}) {
  if (!user) return false;
  switch (action) {
+  case 'directory.profile.edit':
   case 'person.edit': return canEditDirectoryPerson(user.person?.id,resource.id,context.relationships || []);
+  case 'directory.profile.editAny':
+  case 'directory.anniversary.editAny':
+  case 'directory.household.assign':
+  case 'directory.relationship.manage':
+  case 'household.create':
+  case 'household.rename':
+  case 'household.retire': return user.account?.role === 'administrator';
+  case 'directory.anniversary.edit':
   case 'relationship.edit': return resource.relationship_type === 'parent'
    ? can(user,'person.edit',{id:resource.person2_id},context)
    : can(user,'person.edit',{id:resource.person1_id},context) || can(user,'person.edit',{id:resource.person2_id},context);
@@ -14,7 +23,7 @@ export function can(user, action, resource = {}, context = {}) {
   case 'dinner.access': return Boolean(user.household && resource.household_id === user.household.id);
   case 'grocery.access': return Boolean(user.household && resource.household_id === user.household.id);
   case 'dinner.assign': return Boolean(user.person?.household_id);
-  case 'household.manage': return true; // Existing policy: every authenticated member.
+  case 'household.read': return true;
   default: return false;
  }
 }

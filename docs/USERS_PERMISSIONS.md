@@ -1,6 +1,8 @@
 # Users and Permissions Design
 
-Status: agreed design for future implementation. This document changes no application behavior, schema, configuration, or production data. Follow [ARCHITECTURE.md](../ARCHITECTURE.md); no broad refactor or enterprise RBAC framework is required.
+Implementation status: Phase 3 account enforcement and Phase 4 Step 1 Directory/Household restrictions are implemented. Step 1 adds explicit Administrator profile/anniversary corrections and transactional security audits; account administration UI/APIs, role/identity changes, moderation and cross-household overrides remain deferred. Household PATCH/DELETE requires `expected_name` for guarded concurrency. Member person-deletion eligibility is unchanged; no Administrator delete-any override is introduced in Step 1.
+
+Design status: agreed target for staged implementation.  Follow [ARCHITECTURE.md](../ARCHITECTURE.md); no broad refactor or enterprise RBAC framework is required.
 
 ## Authentication, identity, and authorization
 

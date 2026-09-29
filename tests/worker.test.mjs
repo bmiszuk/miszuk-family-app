@@ -48,6 +48,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     assert.ok(p.id); assert.ok(q.id);
     await db.prepare('UPDATE people SET login_email=NULL WHERE id=?').bind(actor.id).run();
     await db.prepare("UPDATE app_users SET person_id=? WHERE id='local-account'").bind(p.id).run();
+    await db.prepare("UPDATE app_users SET role='administrator'").run();
     const marriage = (await call('directory/relationships', 'POST', { person1_id: p.id, person2_id: q.id, relationship_type: 'spouse', anniversary_date: '06-20' })).data.item;
     assert.ok(marriage.id);
     assert.equal((await call('directory/relationships', 'POST', { person1_id: q.id, person2_id: p.id, relationship_type: 'spouse' })).status, 409);

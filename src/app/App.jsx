@@ -42,7 +42,7 @@ export default function App() {
       {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><a href="/cdn-cgi/access/logout">Sign out / Switch account</a><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
         {section === 'home' && <Home member={member} />}
         {section === 'dinner' && (member.household ? <Dinner member={member} /> : <NoHousehold />)}
-        {section === 'directory' && <Directory currentPersonId={member.person?.id} />}
+        {section === 'directory' && <Directory currentPersonId={member.person?.id} administrator={member.account?.role === 'administrator'} />}
         <div className="section-view" hidden={section !== 'groceries'}>{member.household ? <GroceryList currentPersonId={member.person?.id} householdName={member.household?.name} /> : <NoHousehold />}</div>
         <div className="section-view" hidden={section !== 'calendar'}><Calendar /></div>
         <div className="section-view" hidden={section !== 'chat'}><FamilyNews currentPersonId={member.person?.id} /></div>

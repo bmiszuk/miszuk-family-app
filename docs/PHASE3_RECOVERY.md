@@ -21,3 +21,9 @@ No account-management API exists in Phase 3. The Directory API blocks deletion o
 ## Local development
 
 The local development scripts seed only a synthetic, already-bound localhost account from `scripts/local-account.sql` into local D1. Never execute that file remotely. The deployed hostname cannot use LOCAL_DEV authentication.
+
+## Phase 4 Step 1 recovery
+
+Step 1 restricts household and relationship mutations to Administrators. Its rollback checkpoint is `pre-users-phase4-step1-2026-09-29` (`8470b92`), for source comparison only: deploying it would reopen Member household/relationship mutations. Do not use it as a security-preserving rollback.
+
+The operator has prepared and tested `phase4-step1-account-recovery-worker.mjs`, its SHA-256 file, and the private `deploy-phase4-step1-recovery.mjs --deploy-maintenance` helper. These use the same account-aware maintenance source and binding-preserving deployment procedure above. Deploy maintenance if needed, then repair forward with Step 1 enforcement intact. Preserve current D1 data and audit records; no migration or database restore is required for this release.

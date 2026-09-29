@@ -1,6 +1,7 @@
+import {privilegedAudit} from '../shared/securityAudit.js';
 import {HttpError} from '../shared/errors.js';
 import {isUuid} from '../shared/utils.js';
-export async function saveDirectoryPerson({db,id,body,values,now,dateField,requireRelationship}) {
+export async function saveDirectoryPerson({db,id,body,values,now,dateField,requireRelationship,audits,member}) {
   const personId=id || crypto.randomUUID();
   const current=id ? await db.prepare('SELECT * FROM people WHERE id=? AND deleted_at IS NULL').bind(id).first() : null;
   if(id && (!current || current.version!==body.version))throw new HttpError(409,'Someone changed this record. Refresh and reopen it.');
@@ -32,22 +33,24 @@ export async function saveDirectoryPerson({db,id,body,values,now,dateField,requi
         if(retained.has(old.id))throw new HttpError(400,'A relationship was included twice.');
         retained.add(old.id);
         if(anniversary!==old.anniversary_date) {
-          await requireRelationship(old);
+          await requireRelationship(old,'anniversary');
           statements.push(db.prepare('UPDATE relationships SET anniversary_date=?,updated_at=?,version=version+1 WHERE id=?').bind(anniversary,now,old.id));
         }
       } else {
-        if(id)await requireRelationship(r);
+        r.id=crypto.randomUUID();
+        await requireRelationship(r,'create');
         const pair=r.relationship_type==='spouse'?[r.person1_id,r.person2_id].sort():[r.person1_id,r.person2_id];
-        statements.push(db.prepare('INSERT INTO relationships(id,family_id,person1_id,person2_id,relationship_type,anniversary_date,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),family.family_id,...pair,r.relationship_type,anniversary,now,now));
+        statements.push(db.prepare('INSERT INTO relationships(id,family_id,person1_id,person2_id,relationship_type,anniversary_date,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?)').bind(r.id,family.family_id,...pair,r.relationship_type,anniversary,now,now));
       }
     }
     const removals=[];
     for(const old of existing.filter(r=>['parent','spouse'].includes(r.relationship_type)&&!retained.has(r.id))) {
-      await requireRelationship(old);
+      await requireRelationship(old,'remove');
       removals.push(db.prepare('UPDATE relationships SET deleted_at=?,updated_at=?,version=version+1 WHERE id=?').bind(now,now,old.id));
     }
     statements.splice(1,0,...removals);
   }
-  await db.batch(statements);
+  const condition=id?{sql:'EXISTS(SELECT 1 FROM people WHERE id=? AND version=? AND deleted_at IS NULL)',args:[id,body.version]}:{sql:'1',args:[]};
+  await db.batch([...audits.map(a=>privilegedAudit(db,member,a.action,a.type,a.target || personId,a.details,condition)),...statements]);
   return db.prepare('SELECT * FROM people WHERE id=?').bind(personId).first();
 }
