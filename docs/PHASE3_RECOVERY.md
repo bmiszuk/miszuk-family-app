@@ -31,3 +31,7 @@ The operator has prepared and tested `phase4-step1-account-recovery-worker.mjs`,
 ## Phase 4 Step 2 recovery
 
 The Step 2 checkpoint is `pre-users-phase4-step2-2026-09-29` (`eb4f2bc`). This previous release preserves the Phase 3 account boundary and Step 1 privileged-write enforcement, so a matched frontend/backend rollback is security-preserving. No migration or account mutation is introduced. The existing tested private Step 1 account-aware maintenance bundle remains the fail-closed emergency option; preserve data, bindings and audits and repair forward.
+
+## Phase 4 Step 3 recovery
+
+Checkpoint `pre-users-phase4-step3-2026-09-29` (`f429d4d`) is a security-preserving frontend/backend rollback: it removes account mutation controls while retaining authoritative account status, secure first-use activation, and Step 1 restrictions. Preserve newly provisioned accounts, disabled states, bindings and audits; never restore a pre-change D1 snapshot merely to roll back code. No migration is required. The previously tested private account-aware maintenance bundle remains the fail-closed emergency fallback; its checksum is reverified before deployment. Independent operator recovery stays separate from application controls.

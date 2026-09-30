@@ -1,16 +1,18 @@
+import {mutateAccount} from './mutations.js';
 import {can} from '../shared/permissions.js';
 import {HttpError} from '../shared/errors.js';
 import {jsonResponse,isUuid} from '../shared/utils.js';
 
-const accounts = `SELECT u.id,u.person_id,u.status,u.role,p.first_name,p.last_name,
+const accounts = `SELECT u.id,u.person_id,u.status,u.role,u.version,p.first_name,p.last_name,
  i.login_email AS approved_email,
  CASE WHEN i.id IS NULL THEN 'missing' WHEN i.subject IS NOT NULL AND i.bound_at IS NOT NULL THEN 'bound' ELSE 'awaiting_first_sign_in' END AS identity_state,
  h.name AS household FROM app_users u JOIN people p ON p.id=u.person_id
  LEFT JOIN user_identities i ON i.user_id=u.id
  LEFT JOIN households h ON h.id=p.household_id AND h.deleted_at IS NULL`;
-const accountView=r=>({id:r.id,person_id:r.person_id,name:[r.first_name,r.last_name].filter(Boolean).join(' '),status:r.status,role:r.role,approved_email:r.approved_email,identity_state:r.identity_state,household:r.household});
+const accountView=r=>({id:r.id,person_id:r.person_id,name:[r.first_name,r.last_name].filter(Boolean).join(' '),status:r.status,role:r.role,version:r.version,approved_email:r.approved_email,identity_state:r.identity_state,household:r.household});
 const actions={
  'account.bootstrap':'Initial Administrator provisioned','account.provision':'Application access provisioned',
+ 'account.disable':'Application access disabled','account.enable':'Application access enabled',
  'identity.bind':'First sign-in completed','directory.profile.editAny':'Administrator corrected a profile',
  'directory.anniversary.editAny':'Administrator corrected an anniversary',
  'directory.household.assign':'Household assignment changed','directory.relationship.create':'Relationship added',
@@ -26,7 +28,13 @@ function pagination(url) {
 export async function handleAdmin(request,env,member) {
  const url=new URL(request.url),audit=url.pathname==='/api/admin/security-audit';
  if(!can(member,audit?'securityAudit.read':'account.read'))throw new HttpError(403,'Administrator access required.');
- if(request.method!=='GET')throw new HttpError(405,'Read-only endpoint.');
+ if(request.method!=='GET') {
+  const mutation=url.pathname.match(/^\/api\/admin\/accounts\/([^/]+)\/(enable|disable)$/);
+  if(request.method!=='POST'||(!mutation&&url.pathname!=='/api/admin/accounts'))throw new HttpError(405,'Method not allowed.');
+  const id=await mutateAccount(request,env,member,mutation?.[1],mutation?.[2]||'provision');
+  const row=await env.DB.prepare(accounts+' WHERE u.id=?').bind(id).first();
+  return jsonResponse({item:accountView(row)},mutation?200:201);
+ }
  const route=url.pathname.match(/^\/api\/admin\/accounts(?:\/([^/]+))?$/);
  if(!route&&!audit)throw new HttpError(404,'Not found.');
  const db=env.DB;

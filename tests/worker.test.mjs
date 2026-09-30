@@ -56,6 +56,18 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     assert.equal((await call('directory')).data.relationships.length, 1);
     assert.equal((await call(`directory/relationships/${marriage.id}`, 'DELETE', { version: 1 })).status, 200);
     assert.equal((await call(`directory/people/${p.id}`, 'DELETE', { version: 1 })).status, 409);
+    const provisionBody={person_id:q.id,person_version:1,login_email:'runtime@example.test',confirm_email:'runtime@example.test'};
+    const concurrent=await Promise.all([call('admin/accounts','POST',provisionBody),call('admin/accounts','POST',provisionBody)]);
+    assert.deepEqual(concurrent.map(r=>r.status).sort(),[201,409]);
+    const account=concurrent.find(r=>r.status===201).data.item;
+    await db.prepare("CREATE TRIGGER fail_status_audit BEFORE INSERT ON security_audit WHEN NEW.action='account.disable' BEGIN SELECT RAISE(ABORT,'test audit failure'); END").run();
+    assert.equal((await call('admin/accounts/'+account.id+'/disable','POST',{version:1})).status,500);
+    assert.equal((await call('admin/accounts/'+account.id)).data.item.status,'pending');
+    assert.equal((await call('admin/accounts/'+account.id)).data.item.version,1);
+    await db.prepare('DROP TRIGGER fail_status_audit').run();
+    const disabled=await call('admin/accounts/'+account.id+'/disable','POST',{version:1});assert.equal(disabled.status,200);
+    const enabled=await call('admin/accounts/'+account.id+'/enable','POST',{version:2});assert.equal(enabled.status,200);assert.equal(enabled.data.item.status,'pending');
+    assert.equal((await call('admin/accounts/local-account/disable','POST',{version:1})).status,409);
     const production = await mf.dispatchFetch('https://family.miszuk.com/api/me');
     assert.equal(production.status, 503);
   } finally { await mf.dispose(); }

@@ -8,13 +8,13 @@ test('Member denial precedes account/audit queries; read-only methods and Phase 
  DB.prepare=sql=>{queries.push(sql);return original(sql);};
  for(const path of paths){queries.length=0;const r=await request(path);assert.equal(r.status,403);assert.deepEqual(r.data,{error:'Administrator access required.'});assert.equal(queries.length,1);}
  db.exec("UPDATE app_users SET role='administrator'");
- for(const method of ['POST','PATCH','DELETE'])for(const path of paths)assert.equal((await request(path,method,{})).status,405);
+ for(const method of ['PATCH','DELETE'])for(const path of paths)assert.equal((await request(path,method,{})).status,405);
  db.exec("UPDATE app_users SET status='disabled'");for(const path of paths)assert.equal((await request(path)).data.code,'APPLICATION_ACCESS_DENIED');
 });
 test('sanitized accounts distinguish no access, roles, approved email, binding and lifecycle states',async t=>{
  const {db,request}=fixture(t);db.exec("UPDATE app_users SET role='administrator'; UPDATE people SET login_email='legacy-not-approved@example.test'");
  const self=(await request('/api/admin/accounts/local-account')).data.item;
- assert.deepEqual(Object.keys(self).sort(),['id','person_id','name','status','role','approved_email','identity_state','household'].sort());
+ assert.deepEqual(Object.keys(self).sort(),['id','person_id','name','status','role','version','approved_email','identity_state','household'].sort());
  assert.equal(self.approved_email,'family@localhost');assert.equal(self.identity_state,'bound');assert.equal(self.role,'administrator');
  assert.ok(!(JSON.stringify(self).includes('local-development')));assert.ok(!(JSON.stringify(self).includes('legacy-not-approved')));
  const added=(await request('/api/directory/people','POST',{first_name:'No account'})).data.item;

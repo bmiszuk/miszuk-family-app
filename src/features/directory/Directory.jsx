@@ -56,6 +56,8 @@ export default function Directory({currentPersonId,administrator=false}) {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(null);
   const [editor, setEditor] = useState(null);
+  const [accessRevision,setAccessRevision]=useState(0);
+  const accessChanged=()=>{setAccessRevision(value=>value+1);return directory.refresh();};
   const people = directory.data?.people || [], relationships = directory.data?.relationships || [];
   const selected = people.find(person => person.id === selectedId);
   const related = relationships.filter(item => item.person1_id === selectedId || item.person2_id === selectedId);
@@ -64,7 +66,7 @@ export default function Directory({currentPersonId,administrator=false}) {
   const mutate = (path, method, body, notice) => action.run(() => api(`directory/${path}`, { method, body }), notice);
   return <section className="directory-view" aria-label="Family Directory">
     <SectionHeader icon="directory" title="Family Directory" subtitle="The people who make this family ours." count={people.length} />
-    {administrator && <AccessAdministration/>}
+    {administrator && <AccessAdministration revision={accessRevision} onChanged={accessChanged}/>}
     {administrator && <HouseholdManager collection={households} people={people} />}
     <div className="directory-toolbar"><label>Find a person<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Search first or last name" /></label><button disabled={Boolean(editor) || action.busy} onClick={() => setEditor({links:[]})}>Add person</button><button className="quiet" disabled={action.busy} onClick={directory.refresh}>Refresh directory</button></div>
     <ErrorMessage error={action.error || directory.error} /><p className="save-status" role="status">{action.busy ? 'Saving…' : action.notice}</p>
@@ -82,7 +84,7 @@ export default function Directory({currentPersonId,administrator=false}) {
       <h2>{fullName(selected)}</h2><p>Birthday · {familyDateLabel(selected.birth_date)}</p>
       <p>Household · {households.items?.find(h=>h.id===selected.household_id)?.name || 'Not assigned'}</p><p>Legacy email · {selected.login_email || 'Not assigned'}</p>
       {canEdit && <div className="actions"><button className="quiet" disabled={Boolean(editor) || action.busy} onClick={() => setEditor({...selected,links:related})}>Edit person</button><DeleteButton label={fullName(selected)} disabled={!canEditDirectoryPerson(currentPersonId,selected?.id,relationships) || related.length > 0 || Boolean(editor) || action.busy} onDelete={async () => { const saved = await mutate(`people/${selected.id}`, 'DELETE', { version: selected.version }, 'Person removed.'); if (saved) setSelectedId(null); return saved; }} /></div>}
-      {administrator && <PersonAccess key={selected.id} personId={selected.id}/>}
+      {administrator && <PersonAccess key={selected.id} person={selected} household={households.items?.find(h=>h.id===selected.household_id)?.name} revision={accessRevision} onChanged={accessChanged}/>}
       <h3>Relationships</h3>
       {!related.length && <p className="muted">No relationships assigned.</p>}
       <ul className="relationship-list">{related.map(relationship => {
