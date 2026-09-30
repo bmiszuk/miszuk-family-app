@@ -82,3 +82,17 @@ test('notification schema enforces ownership, unique endpoint, bounded metadata 
  assert.throws(()=>db.exec("DELETE FROM app_users WHERE id='local-account'"));
  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);
 });
+
+test('pilot eligibility is an exact account ID, never Administrator role, and both kill switches work',async t=>{
+ const {call,db,env}=await setup(t);
+ for(const role of ['member','administrator']){
+  db.prepare('UPDATE app_users SET role=?').run(role);
+  env.NOTIFICATIONS_ALLOWED_USER_IDS='someone-else';
+  const blocked=await call('config');assert.equal(blocked.data.enrollment_allowed,false);assert.equal(blocked.data.sending_allowed,false);assert.equal(blocked.data.public_key,null);
+  for(const route of ['subscriptions','test'])assert.equal((await call(route,'POST',{})).status,403);
+  env.NOTIFICATIONS_ALLOWED_USER_IDS='local-account';
+  assert.equal((await call('config')).data.enrollment_allowed,true);assert.equal((await call('config')).data.sending_allowed,true);
+ }
+ env.NOTIFICATIONS_SENDING_ENABLED='false';assert.equal((await call('test','POST',{})).status,403);assert.equal((await call('config')).data.enrollment_allowed,true);
+ env.NOTIFICATIONS_ENROLLMENT_ENABLED='false';assert.equal((await call('subscriptions','POST',{})).status,403);
+});

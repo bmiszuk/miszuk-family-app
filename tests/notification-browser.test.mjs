@@ -25,3 +25,11 @@ test('notification registration never requests permission; only explicit enrollm
  assert.match(browserStatus({navigator:{userAgent:'iPhone'},matchMedia:()=>({matches:false})}),/Home Screen/);
  assert.match(browserStatus({navigator:{userAgent:'test'},isSecureContext:false}),/not supported/);
 });
+
+test('iPhone pilot enrollment requires Home Screen support and permission eligibility',async()=>{
+ const {canEnroll}=await import('../src/features/notifications/browser.js');
+ const browser={isSecureContext:true,navigator:{userAgent:'iPhone',serviceWorker:{}},PushManager:{},Notification:{permission:'default'},matchMedia:()=>({matches:false})};
+ assert.equal(canEnroll(browser),false);browser.navigator.standalone=true;assert.equal(canEnroll(browser),true);
+ browser.Notification.permission='denied';assert.equal(canEnroll(browser),false);browser.Notification.permission='granted';assert.equal(canEnroll(browser),true);
+ delete browser.PushManager;assert.equal(canEnroll(browser),false);
+});

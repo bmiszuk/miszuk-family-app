@@ -1,5 +1,10 @@
 import {api} from '../../shared/client.js';
 const markerKey = 'miszuk-notification-device';
+export function canEnroll(browser = window) {
+  const nav = browser.navigator;
+  const ios = /iPad|iPhone|iPod/.test(nav.userAgent) || (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
+  return Boolean(browser.isSecureContext && 'serviceWorker' in nav && 'PushManager' in browser && 'Notification' in browser && browser.Notification.permission !== 'denied' && (!ios || nav.standalone || browser.matchMedia('(display-mode: standalone)').matches));
+}
 export function browserStatus(browser = window) {
   const nav = browser.navigator;
   const ios = /iPad|iPhone|iPod/.test(nav.userAgent) || (nav.platform === 'MacIntel' && nav.maxTouchPoints > 1);
@@ -8,7 +13,7 @@ export function browserStatus(browser = window) {
   return {default: 'Permission has not been requested.', denied: 'Permission is blocked. Change notification permissions in your device settings.', granted: 'Browser permission is allowed.'}[browser.Notification.permission];
 }
 export function registerWorker() {
-  if (window.isSecureContext && 'serviceWorker' in navigator) return navigator.serviceWorker.register('/sw.js', {scope: '/', updateViaCache: 'none'});
+  if (window.isSecureContext && 'serviceWorker' in navigator) return navigator.serviceWorker.register('/sw.js', {scope: '/', updateViaCache: 'none'}).then(() => navigator.serviceWorker.ready);
   return Promise.resolve(null);
 }
 export function deviceMarker() {
@@ -42,7 +47,8 @@ export async function enrollDevice(userId, config, registration) {
     applicationServerKey: Uint8Array.from(atob(config.public_key.replaceAll('-', '+').replaceAll('_', '/')), c => c.charCodeAt(0)),
   });
   try {
-    const result = await api('notifications/subscriptions', {method: 'POST', body: {subscription: subscription.toJSON(), device_label: 'Browser device'}});
+    const device_label = /iPhone/.test(navigator.userAgent) ? 'iPhone' : /iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'iPad' : 'Browser device';
+    const result = await api('notifications/subscriptions', {method: 'POST', body: {subscription: subscription.toJSON(), device_label}});
     localStorage.setItem(markerKey, JSON.stringify({userId, id: result.item.id}));
   } catch (error) {
     await subscription.unsubscribe();
