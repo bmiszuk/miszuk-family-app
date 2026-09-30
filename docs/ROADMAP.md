@@ -48,7 +48,7 @@ The application-account boundary and explicit Administrator controls through Use
 ## Future ideas — not approved for implementation
 
 - **Personal grocery lists:** lists for an individual in addition to the existing household grocery behavior. Ownership, sharing and navigation require a future scoped design; do not change current household lists now.
-- **Push/pop-up notifications:** Phase 1A adds a disabled foundation only; see [Notifications operations](NOTIFICATIONS.md). Phase 1B enables the Bob-only manual physical-iPhone pilot; device delivery/tap acceptance remains for Bob to verify. Event triggers, category preference controls and broader rollout remain future work.
+- **Push/pop-up notifications:** Phase 1A added the disabled foundation and Phase 1B is production-verified on Bob's physical iPhone, including enrollment, locked-phone delivery, tap-to-open, disable/removal, re-enable and a subsequent test. See [Notifications operations](NOTIFICATIONS.md). The pilot remains Bob-only; event triggers, category preference controls and broader rollout remain future work.
 - **Family surveys/polls:** for example, “Who will be home Saturday for dinner?” A future design should let a creator choose appropriate recipients, prompt those who have not responded when they log in, and provide results to the survey creator. Define recipient eligibility, response visibility and prompt/dismissal behavior before implementation.
 
 These are recorded ideas, not a scheduled release or authorization to implement them. Preserve existing behavior and develop each through a separately approved, bounded task. Do not begin Phase 4 Step 5 as part of recording this roadmap.

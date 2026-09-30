@@ -48,7 +48,7 @@ Before the remote migration, privately export D1, restore it locally, compare ev
 
 For application rollback, retain the additive tables/trigger and disable both switches. Do not restore an old database just to roll back code. Retain this compatible `/sw.js` asset and its headers even if restoring pre-notification frontend assets; an installed worker outlives an application release. It never caches or fetches family data, so it cannot revive old application access. Preserve the tested account-aware maintenance recovery Worker, existing Access bindings and assets; it denies family APIs safely while an account-aware forward fix is prepared. Never fall back to pre-account enforcement.
 
-Phase 1B needs explicit authorization, stable VAPID recovery, Bob's stable account-ID allowlist, and a physical iPhone Home Screen pilot. Test consent, delivery, click routing, expired Access, device disable/sign-out and revocation before wider availability. Do not enable any of these as part of Phase 1A. Family event triggers, retries, category UI, quiet hours and other notification features remain deferred.
+Phase 1B is now production-verified on Bob's physical iPhone. Enrollment, locked-phone delivery with the PWA closed, notification display, tap-to-open/focus behavior, disable/removal, re-enable, and a subsequent test notification all passed. The pilot remains Bob-only; family-wide rollout, automatic triggers, retries, category UI and quiet hours remain deferred.
 
 ## Phase 1B — Bob-only manual pilot
 
@@ -72,6 +72,6 @@ Rollback checkpoint: `pre-push-phase1b-2026-09-30` at `87e6a9c`. Redeploy that c
 6. In iPhone Notifications select **Disable on this device**. Expect Disabled and no device entry after refreshing desktop settings. Existing Notification Center entries can remain and should be cleared manually.
 7. Select **Enable on this device** again on iPhone. Expect one fresh active device entry, not duplicates. Repeat the desktop-triggered locked-phone test after the one-minute cooldown. Existing permission may mean no second permission prompt.
 
-The desktop test controls list only the authenticated account’s sanitized devices. They never send as another user or expose endpoints/keys. Enrollment waits for service-worker activation and is disabled where platform support, Home Screen installation or permission is missing. Physical delivery, locked-screen presentation and iOS/Access tap behavior remain unverified until Bob reports these results.
+The desktop test controls list only the authenticated account's sanitized devices. They never send as another user or expose endpoints/keys. Enrollment waits for service-worker activation and is disabled where platform support, Home Screen installation or permission is missing. Bob's physical-iPhone acceptance is complete and production-verified; future changes must preserve this tested path.
 
 Platform references: [Apple Home Screen installation](https://support.apple.com/guide/iphone/open-as-web-app-iphea86e5236/ios) and [WebKit iOS Web Push requirements](https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/).
