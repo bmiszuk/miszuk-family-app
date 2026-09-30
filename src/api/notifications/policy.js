@@ -1,7 +1,9 @@
 import {HttpError} from '../shared/errors.js';
 export const categories=['chat','polls','dinner','calendar','family_dates','vehicles'];
 export function rollout(env,userId) {
- const allowed=String(env.NOTIFICATIONS_ALLOWED_USER_IDS||'').split(',').map(s=>s.trim()).filter(Boolean).includes(userId);
+ // Config routes run after requireAccount; enrollment and sends additionally
+ // recheck eligibleAccount in SQL. This switch never authenticates an account.
+ const allowed=Boolean(userId)&&(env.NOTIFICATIONS_AUDIENCE==='active_accounts'||String(env.NOTIFICATIONS_ALLOWED_USER_IDS||'').split(',').map(s=>s.trim()).filter(Boolean).includes(userId));
  const configured=Boolean(env.VAPID_PUBLIC_KEY&&env.VAPID_PRIVATE_KEY&&env.VAPID_KEY_ID&&env.VAPID_SUBJECT==='mailto:bob@miszuk.com');
  return {enrollment_allowed:allowed&&configured&&env.NOTIFICATIONS_ENROLLMENT_ENABLED==='true',sending_allowed:allowed&&configured&&env.NOTIFICATIONS_SENDING_ENABLED==='true'};
 }

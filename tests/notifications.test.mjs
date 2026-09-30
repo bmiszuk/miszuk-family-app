@@ -83,7 +83,7 @@ test('notification schema enforces ownership, unique endpoint, bounded metadata 
  assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(),[]);
 });
 
-test('pilot eligibility is an exact account ID, never Administrator role, and both kill switches work',async t=>{
+test('optional pilot restriction remains exact account ID, never Administrator role, and both kill switches work',async t=>{
  const {call,db,env}=await setup(t);
  for(const role of ['member','administrator']){
   db.prepare('UPDATE app_users SET role=?').run(role);
@@ -95,4 +95,29 @@ test('pilot eligibility is an exact account ID, never Administrator role, and bo
  }
  env.NOTIFICATIONS_SENDING_ENABLED='false';assert.equal((await call('test','POST',{})).status,403);assert.equal((await call('config')).data.enrollment_allowed,true);
  env.NOTIFICATIONS_ENROLLMENT_ENABLED='false';assert.equal((await call('subscriptions','POST',{})).status,403);
+});
+
+test('family enrollment includes future active accounts without household or allowlist membership',async t=>{
+ const {call,db,env,keys}=await setup(t);
+ env.NOTIFICATIONS_AUDIENCE='active_accounts';env.NOTIFICATIONS_ALLOWED_USER_IDS='';
+ db.exec("INSERT INTO people(id,family_id,first_name) SELECT 'future-person',id,'Future' FROM families LIMIT 1; INSERT INTO app_users(id,person_id,status,role) VALUES('future-account','future-person','active','member'); UPDATE user_identities SET user_id='future-account'");
+ for(const role of ['member','administrator']){
+  db.prepare("UPDATE app_users SET role=? WHERE id='future-account'").run(role);
+  const config=(await call('config')).data;
+  assert.equal(config.enrollment_allowed,true);assert.equal(config.sending_allowed,true);
+ }
+ const registered=await call('subscriptions','POST',{subscription:keys.subscription});assert.equal(registered.status,200);
+ assert.equal(db.prepare('SELECT user_id FROM push_subscriptions').get().user_id,'future-account');
+ for(const status of ['disabled','pending']){
+  db.prepare("UPDATE app_users SET status=? WHERE id='future-account'").run(status);
+  assert.equal((await call('config')).status,403);
+  assert.equal((await call('subscriptions','POST',{subscription:keys.subscription})).status,403);
+  await assert.rejects(sendTest(env,'future-account',registered.data.item.id),e=>e.status===404);
+ }
+ db.exec("UPDATE app_users SET status='active' WHERE id='future-account'; UPDATE people SET deleted_at=CURRENT_TIMESTAMP WHERE id='future-person'");
+ assert.equal((await call('config')).status,403);
+ await assert.rejects(sendTest(env,'future-account',registered.data.item.id),e=>e.status===404);
+ db.exec("UPDATE people SET deleted_at=NULL; DELETE FROM user_identities");
+ assert.equal((await call('config')).status,403);
+ await assert.rejects(sendTest(env,'future-account',registered.data.item.id),e=>e.status===404);
 });

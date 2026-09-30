@@ -1,8 +1,16 @@
-# Push notifications: foundation and Bob-only pilot
+# Push notifications: voluntary family enrollment
+
+## Current status — Phase 1C
+
+Phase 1C expands voluntary enrollment and manual self-tests to every eligible active provisioned application account, including future accounts. Production uses `NOTIFICATIONS_AUDIENCE=active_accounts`; the pilot allowlist is empty. The central account gate requires a verified identity, active account and active Directory person. Approved/unbound identities still complete secure first-use activation through that gate. Enrollment and each send also recheck account/person/bound-identity eligibility in SQL. Household assignment and Administrator role do not grant or restrict notification eligibility.
+
+Consent remains explicit and per device. Users can read, enroll, detach and test only their own devices. No rollout message is sent, no browser permission is requested automatically, and no Chat, Birthday, poll, Dinner, Calendar or other automatic trigger is enabled. Both existing server kill switches remain authoritative. VAPID keys, subscriptions and account data are preserved; no migration is needed.
+
+Rollback: `pre-push-phase1c-2026-09-30` at documentation checkpoint `0ede46c` (application baseline `64bf121`). Redeploy that checkpoint to return to the Bob-only pilot. Its code uses the exact pilot allowlist and ignores the newer audience setting; clear that setting when maintaining configuration afterward. Retain the VAPID secret, service worker and D1 data. Family subscriptions enrolled before rollback remain stored but become ineligible for new sends while the pilot restriction applies. Both switches can instead be set false to suspend all new enrollment/sends. Already accepted provider messages cannot be recalled.
 
 ## Boundary and enrollment decision
 
-Phase 1A introduced the disabled foundation. Phase 1B enables only Bob’s manual enrollment/self-test pilot described below. No automatic event triggers are enabled. Authenticated registration of a browser-generated PushSubscription is sufficient for this private application: Cloudflare authentication, the authoritative active account gate, same-origin write checks, explicit browser consent, server-derived ownership and globally unique endpoints form the boundary. A push-delivered challenge would add state and an extra delivery without materially addressing a demonstrated threat here. Subscription endpoints and keys are credentials; never copy, log or expose them in status APIs. Registration cannot transfer an endpoint between accounts, and unknown request fields (including submitted owners) are rejected.
+Phase 1A introduced the disabled foundation; Phase 1B completed Bob's physical-iPhone pilot. Phase 1C opens voluntary enrollment to eligible family accounts. No automatic event triggers are enabled. Authenticated registration of a browser-generated PushSubscription is sufficient for this private application: Cloudflare authentication, the authoritative active account gate, same-origin write checks, explicit browser consent, server-derived ownership and globally unique endpoints form the boundary. A push-delivered challenge would add state and an extra delivery without materially addressing a demonstrated threat here. Subscription endpoints and keys are credentials; never copy, log or expose them in status APIs. Registration cannot transfer an endpoint between accounts, and unknown request fields (including submitted owners) are rejected.
 
 The pinned MIT library `@block65/webcrypto-web-push@2.0.0` constructs RFC 8291 AES128GCM payloads and RFC 8292 VAPID signatures using Web Crypto. Synthetic tests run in the existing Workers compatibility date without Node flags, independently decrypt payloads and verify signatures, and replace all provider networking with mocks. Transport uses manual redirects: provider redirects are failures, never followed. Enrollment accepts HTTPS Apple, FCM and Mozilla production push hosts only; expanding that list requires review. No hand-written production Web Push cryptography is introduced.
 
@@ -38,7 +46,7 @@ Phase 1A disabled baseline / emergency kill-switch configuration:
 - `NOTIFICATIONS_ALLOWED_USER_IDS` empty
 - `VAPID_SUBJECT=mailto:bob@miszuk.com`
 
-Both gates also require exact account-ID allowlisting and all VAPID fields. Administrator role is not a rollout grant. Turn sending off to stop new dispatches; turn enrollment off independently to prevent registration. Preserve these settings in any emergency release.
+Both gates require the configured audience and all VAPID fields. Phase 1C uses active application accounts; omitting that audience setting retains the optional exact-ID pilot restriction. Administrator role is not a rollout grant. Turn sending off to stop new dispatches; turn enrollment off independently to prevent registration. Preserve these settings in any emergency release.
 
 Phase 1B creates one stable P-256 VAPID pair using Web Crypto. The private key is a Worker `VAPID_PRIVATE_KEY` secret with a user-confirmed Bitwarden recovery record; `VAPID_PUBLIC_KEY` and the stable nonsecret `VAPID_KEY_ID` are deployment configuration. The adapter expects the base64url raw uncompressed public point and base64url private JWK `d`. Never put private values in Git, command transcripts or documentation. Do not generate keys during deployment. Document credential location and independent recovery access, not values. Key rotation requires deliberate re-enrollment; key-ID mismatches are rejected.
 
@@ -48,9 +56,9 @@ Before the remote migration, privately export D1, restore it locally, compare ev
 
 For application rollback, retain the additive tables/trigger and disable both switches. Do not restore an old database just to roll back code. Retain this compatible `/sw.js` asset and its headers even if restoring pre-notification frontend assets; an installed worker outlives an application release. It never caches or fetches family data, so it cannot revive old application access. Preserve the tested account-aware maintenance recovery Worker, existing Access bindings and assets; it denies family APIs safely while an account-aware forward fix is prepared. Never fall back to pre-account enforcement.
 
-Phase 1B is now production-verified on Bob's physical iPhone. Enrollment, locked-phone delivery with the PWA closed, notification display, tap-to-open/focus behavior, disable/removal, re-enable, and a subsequent test notification all passed. The pilot remains Bob-only; family-wide rollout, automatic triggers, retries, category UI and quiet hours remain deferred.
+Phase 1B is production-verified on Bob's physical iPhone. Enrollment, locked-phone delivery with the PWA closed, notification display, tap-to-open/focus behavior, disable/removal, re-enable, and a subsequent test notification all passed. Phase 1C expands voluntary enrollment to eligible family accounts; automatic triggers, retries, category UI and quiet hours remain deferred.
 
-## Phase 1B — Bob-only manual pilot
+## Phase 1B — completed Bob-only manual pilot (historical scope)
 
 Enrollment and self-test switches are enabled only in conjunction with the exact allowlist `2f1e9ed4-a0cb-433b-a30b-5aeab0138b30` (Bob’s existing active, bound application account). Administrator role is irrelevant. Every other account remains ineligible, including any future Administrator. No automatic Chat, Dinner, Calendar, poll, birthday or Vehicle notification exists. No migration or account mutation is required.
 
