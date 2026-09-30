@@ -14,6 +14,7 @@ export function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
   db.exec(accountSeed);
+  db.exec(readFileSync(new URL('../migrations/0009_push_notifications.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -41,4 +42,3 @@ export function fixture(t) {
   }
   return { db, request, DB };
 }
-

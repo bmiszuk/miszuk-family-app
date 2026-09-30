@@ -1,4 +1,6 @@
 import Dinner from '../features/dinner/Dinner.jsx';
+import Notifications, {SignOut} from '../features/notifications/Notifications.jsx';
+import {registerWorker} from '../features/notifications/browser.js';
 import { useEffect, useState } from 'react';
 import '../index.css';
 import Home from '../features/home/Home.jsx';
@@ -24,6 +26,7 @@ export default function App() {
   const [member, setMember] = useState(null);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
+  useEffect(() => { if (member) registerWorker().catch(() => {}); }, [member]);
   useEffect(() => onAccessFailure(failure => { setMember(null); setError(failure); }), []);
   useEffect(() => {
     const controller = new AbortController();
@@ -35,11 +38,12 @@ export default function App() {
   return <div className="page">
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="hero"><div><h1><span className="brand-icon"><Icon name="home" /></span> Miszuk Family</h1></div>
-      {member && <div className="member-info"><span>{member.person?.first_name.split(/\s+/)[0] || member.name}</span>{!member.local && <a href="/cdn-cgi/access/logout">Sign out</a>}</div>}
+      {member && <div className="member-info"><span>{member.person?.first_name.split(/\s+/)[0] || member.name}</span><a href="#notifications">Notifications</a>{!member.local && <SignOut userId={member.account.id} />}</div>}
     </header>
     {member && <nav className="section-nav app-nav" aria-label="Family sections">{sections.map(item => <a key={item.id} href={`#${item.id}`} aria-current={section === item.id ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></a>)}</nav>}
     <main id="main" tabIndex={-1}>
-      {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><a href="/cdn-cgi/access/logout">Sign out / Switch account</a><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
+      {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><SignOut /><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
+        {section === 'notifications' && <Notifications member={member} />}
         {section === 'home' && <Home member={member} />}
         {section === 'dinner' && (member.household ? <Dinner member={member} /> : <NoHousehold />)}
         {section === 'directory' && <Directory currentPersonId={member.person?.id} administrator={member.account?.role === 'administrator'} />}

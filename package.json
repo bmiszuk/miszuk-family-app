@@ -17,6 +17,7 @@
     "db:remote:apply": "wrangler d1 migrations apply family-db --remote"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "2.0.0",
     "@cloudflare/workers-types": "^4.20260701.1",
     "@js-temporal/polyfill": "^0.5.1",
     "ical.js": "^2.2.1",

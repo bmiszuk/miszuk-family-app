@@ -28,3 +28,11 @@ The Worker remains the authentication and application-account boundary for famil
 Invitations, Chat moderation, cross-household administration, Photos and Vehicles remain deferred. Current account roles/status are authoritative at the request boundary; revocation must not be implemented by deleting Directory people. Household query scope must accompany any future cross-household permission expansion; changing a UI button or a single boolean alone is insufficient.
 
 Before or alongside Vehicles, define its own ownership/actions explicitly. Further splitting `domain/familyDisplay.js`, feature CSS extraction and coordinating duplicate polling can proceed separately when useful; none is required to add a feature handler. The legacy endpoints must be included in any future system-wide access/revocation rollout.
+
+## Notifications — Phase 1A disabled foundation
+
+`src/api/notifications` owns authenticated account-only configuration, subscriptions, preferences and the test sender. The central account gate and origin checks apply to every route. Members and Administrators have identical own-device rights; there is no send-as or cross-account subscription access. Migration `0009_push_notifications.sql` adds `push_subscriptions` and `notification_preferences`, plus an identity-replacement trigger that invalidates devices in the same transaction as replacement.
+
+`src/features/notifications` owns the settings destination and explicit sign-out cleanup. `public/sw.js` handles only notification display and safe Home/Chat click routing. It has no fetch handler, cache, offline family data, background API requests or authentication bypass. Navigation through a notification still encounters the normal Access/account boundary.
+
+Production enrollment and sending remain independently disabled; the account-ID allowlist is empty. There are no category triggers, production VAPID keys or automatic permission prompts. See [Notifications operations](docs/NOTIFICATIONS.md) for the reviewed library, privacy policy, switches, recovery and the separately authorized Phase 1B pilot.
