@@ -43,7 +43,15 @@ Before implementation, resolve the requirements document's open ownership and au
 
 ## Future platform work
 
-Centralized roles/permissions, administrator override, and administrator-provisioned external-user invitations are future capabilities, not existing behavior. Introduce them when a real feature requires them, using the existing trusted identity and server-side policy boundaries. Do not build a general permissions or invitation system speculatively, and do not treat editable Directory identity fields as authorization grants.
+The application-account boundary and explicit Administrator controls through Users & Permissions Phase 4 Step 4 are implemented (production release `12b2212`). Follow [Users and Permissions](USERS_PERMISSIONS.md) for the implemented scope and remaining work. Administrator-provisioned external-user invitations and additional feature-specific capabilities remain future work. Introduce them only when explicitly authorized for a real need; do not build a generic permissions framework or treat legacy Directory email as an authorization grant.
+
+## Future ideas — not approved for implementation
+
+- **Personal grocery lists:** lists for an individual in addition to the existing household grocery behavior. Ownership, sharing and navigation require a future scoped design; do not change current household lists now.
+- **Push/pop-up notifications:** user-selectable notification preferences where appropriate. Define which events warrant prompts, delivery channels, consent and device/preferences behavior before implementation; no notification delivery is included in current work.
+- **Family surveys/polls:** for example, “Who will be home Saturday for dinner?” A future design should let a creator choose appropriate recipients, prompt those who have not responded when they log in, and provide results to the survey creator. Define recipient eligibility, response visibility and prompt/dismissal behavior before implementation.
+
+These are recorded ideas, not a scheduled release or authorization to implement them. Preserve existing behavior and develop each through a separately approved, bounded task. Do not begin Phase 4 Step 5 as part of recording this roadmap.
 
 ## Immediate handoff
 
