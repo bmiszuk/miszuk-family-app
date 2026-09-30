@@ -3,11 +3,15 @@ import { createApiRouter } from './src/api/router.js';
 import { authenticate, checkOrigin } from './src/api/shared/auth.js';
 import { HttpError } from './src/api/shared/errors.js';
 import { jsonResponse } from './src/api/shared/utils.js';
+import {runBirthdays} from './src/api/notifications/events.js';
 
 const handleApiRequest = createApiRouter();
 
 export default {
-  async fetch(request, env) {
+  async scheduled(controller, env) {
+    await runBirthdays(env,controller.scheduledTime);
+  },
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith('/api/')) {
@@ -15,7 +19,7 @@ export default {
         const authenticated = await authenticate(request, env);
         checkOrigin(request, env);
         const member = await requireAccount(env, authenticated);
-        return await handleApiRequest(request, env, member);
+        return await handleApiRequest(request, env, member, ctx);
       } catch (error) {
         if (error instanceof HttpError) return jsonResponse({ error: error.message, ...(error.code ? { code: error.code } : error.status === 401 ? { code: 'AUTHENTICATION_REQUIRED' } : {}) }, error.status);
         console.error('Household API failed', error instanceof Error ? error.name : 'Unknown error');

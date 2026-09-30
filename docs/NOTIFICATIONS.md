@@ -1,22 +1,41 @@
-# Push notifications: voluntary family enrollment
+# Push notifications: Birthdays and Family Chat
 
-## Current status — Phase 1C
+## Current categories
+
+Birthdays and Family Chat are the only automatic categories. Their account-wide switches default **On** when no explicit value exists; saved opt-outs remain off. Device enrollment remains separate, voluntary and explicit. No other category is shown or triggered.
+
+- **Birthdays:** active Directory birthdays use the same America/Chicago date and February 29 rules as Home. At 8:00 AM, send **Birthday today / It’s [first name]’s birthday today.** Tapping opens Home.
+- **Family Chat:** after a new message commits, background delivery sends **Family Chat / [first name] posted a new message.** to eligible accounts other than the author. Tapping opens Chat. Message text is never included. Edits do not trigger notifications; notification errors cannot roll back the post.
+
+### Scheduling and delivery guarantees
+
+Cloudflare Cron runs `0 13,14 * * *` UTC; the handler proceeds only when the scheduled instant is 8 AM America/Chicago. This handles standard/daylight time without changing the schedule. There is no public scheduling endpoint. Wrangler deploy synchronizes the configured triggers; API-based deployment must also update the Worker's schedules. Schedule propagation can take up to 15 minutes.
+
+Migration `0010_notification_deliveries.sql` adds an event/account claim ledger. Birthday keys contain the Directory person ID and local date; Chat keys contain the committed post ID. An atomic claim precedes delivery, preventing repeated/concurrent runs from sending that event again to the same account. No birthday data is copied. Results contain counts, not payloads or push credentials.
+
+Delivery is best-effort, at-most-once per event/account, with one attempt per currently enrolled device. A crash or ambiguous provider failure after claiming can miss a notification; there is no automatic retry queue. Four accounts are processed concurrently, devices sequentially. Chat background work has Cloudflare's 30-second post-response lifetime; slow providers or a much larger device population may require a durable queue later. Payload TTL is five minutes. Provider acceptance does not prove display. Account, person, identity, device revision and category preference are rechecked immediately before dispatch.
+
+Rollback: `pre-notification-categories-2026-09-30` at `60907c0`. Remove the Cron schedule and redeploy that family-enrollment release. Retain the additive ledger, preferences, subscriptions, VAPID secret and service worker; do not restore an old database for a code rollback. The sending kill switch stops new dispatch. Accepted provider messages cannot be recalled.
+
+Synthetic tests cover payload encryption, authorization, opt-outs, dates and duplicate suppression. Physical-device category acceptance still requires a real message from another family member and a naturally scheduled birthday; do not create fake production records or send rollout notifications for verification.
+
+## Family enrollment — Phase 1C history
 
 Phase 1C expands voluntary enrollment and manual self-tests to every eligible active provisioned application account, including future accounts. Production uses `NOTIFICATIONS_AUDIENCE=active_accounts`; the pilot allowlist is empty. The central account gate requires a verified identity, active account and active Directory person. Approved/unbound identities still complete secure first-use activation through that gate. Enrollment and each send also recheck account/person/bound-identity eligibility in SQL. Household assignment and Administrator role do not grant or restrict notification eligibility.
 
-Consent remains explicit and per device. Users can read, enroll, detach and test only their own devices. No rollout message is sent, no browser permission is requested automatically, and no Chat, Birthday, poll, Dinner, Calendar or other automatic trigger is enabled. Both existing server kill switches remain authoritative. VAPID keys, subscriptions and account data are preserved; no migration is needed.
+Consent remains explicit and per device. Users can read, enroll, detach and test only their own devices. No rollout message is sent, no browser permission is requested automatically, and only the two categories above have automatic triggers. Both existing server kill switches remain authoritative. VAPID keys, subscriptions and account data are preserved; no migration is needed.
 
 Rollback: `pre-push-phase1c-2026-09-30` at documentation checkpoint `0ede46c` (application baseline `64bf121`). Redeploy that checkpoint to return to the Bob-only pilot. Its code uses the exact pilot allowlist and ignores the newer audience setting; clear that setting when maintaining configuration afterward. Retain the VAPID secret, service worker and D1 data. Family subscriptions enrolled before rollback remain stored but become ineligible for new sends while the pilot restriction applies. Both switches can instead be set false to suspend all new enrollment/sends. Already accepted provider messages cannot be recalled.
 
 ## Boundary and enrollment decision
 
-Phase 1A introduced the disabled foundation; Phase 1B completed Bob's physical-iPhone pilot. Phase 1C opens voluntary enrollment to eligible family accounts. No automatic event triggers are enabled. Authenticated registration of a browser-generated PushSubscription is sufficient for this private application: Cloudflare authentication, the authoritative active account gate, same-origin write checks, explicit browser consent, server-derived ownership and globally unique endpoints form the boundary. A push-delivered challenge would add state and an extra delivery without materially addressing a demonstrated threat here. Subscription endpoints and keys are credentials; never copy, log or expose them in status APIs. Registration cannot transfer an endpoint between accounts, and unknown request fields (including submitted owners) are rejected.
+Phase 1A introduced the disabled foundation; Phase 1B completed Bob's physical-iPhone pilot. Phase 1C opens voluntary enrollment to eligible family accounts. Only Birthdays and Family Chat have automatic event triggers. Authenticated registration of a browser-generated PushSubscription is sufficient for this private application: Cloudflare authentication, the authoritative active account gate, same-origin write checks, explicit browser consent, server-derived ownership and globally unique endpoints form the boundary. A push-delivered challenge would add state and an extra delivery without materially addressing a demonstrated threat here. Subscription endpoints and keys are credentials; never copy, log or expose them in status APIs. Registration cannot transfer an endpoint between accounts, and unknown request fields (including submitted owners) are rejected.
 
 The pinned MIT library `@block65/webcrypto-web-push@2.0.0` constructs RFC 8291 AES128GCM payloads and RFC 8292 VAPID signatures using Web Crypto. Synthetic tests run in the existing Workers compatibility date without Node flags, independently decrypt payloads and verify signatures, and replace all provider networking with mocks. Transport uses manual redirects: provider redirects are failures, never followed. Enrollment accepts HTTPS Apple, FCM and Mozilla production push hosts only; expanding that list requires review. No hand-written production Web Push cryptography is introduced.
 
 ## Storage and API
 
-Migration `0009_push_notifications.sql` is additive and seeds nothing. `push_subscriptions` references `app_users` restrictively, permits up to ten devices per account through atomic registration, and stores a unique endpoint, browser keys, VAPID key identifier, label, enabled state, expiry, timestamps, revision and bounded result/failure fields. List responses contain only display/status fields. `notification_preferences` stores an account's versioned allowlisted categories (chat, polls, dinner, calendar, family_dates, vehicles), all default off, and a test-send cooldown. No preference controls imply that unimplemented triggers exist.
+Migration `0009_push_notifications.sql` is additive and seeds nothing. `push_subscriptions` references `app_users` restrictively, permits up to ten devices per account through atomic registration, and stores a unique endpoint, browser keys, VAPID key identifier, label, enabled state, expiry, timestamps, revision and bounded result/failure fields. List responses contain only display/status fields. `notification_preferences` stores an account's versioned allowlisted categories (birthdays, chat, polls, dinner, calendar, family_dates, vehicles); missing birthdays/chat values default on, other categories default off, and a test-send cooldown. No preference controls imply that unimplemented triggers exist.
 
 Every endpoint is centrally account-gated:
 
@@ -56,7 +75,7 @@ Before the remote migration, privately export D1, restore it locally, compare ev
 
 For application rollback, retain the additive tables/trigger and disable both switches. Do not restore an old database just to roll back code. Retain this compatible `/sw.js` asset and its headers even if restoring pre-notification frontend assets; an installed worker outlives an application release. It never caches or fetches family data, so it cannot revive old application access. Preserve the tested account-aware maintenance recovery Worker, existing Access bindings and assets; it denies family APIs safely while an account-aware forward fix is prepared. Never fall back to pre-account enforcement.
 
-Phase 1B is production-verified on Bob's physical iPhone. Enrollment, locked-phone delivery with the PWA closed, notification display, tap-to-open/focus behavior, disable/removal, re-enable, and a subsequent test notification all passed. Phase 1C expands voluntary enrollment to eligible family accounts; automatic triggers, retries, category UI and quiet hours remain deferred.
+Phase 1B is production-verified on Bob's physical iPhone. Enrollment, locked-phone delivery with the PWA closed, notification display, tap-to-open/focus behavior, disable/removal, re-enable, and a subsequent test notification all passed. Phase 1C expands voluntary enrollment to eligible family accounts; other category triggers, retries and quiet hours remain deferred.
 
 ## Phase 1B — completed Bob-only manual pilot (historical scope)
 

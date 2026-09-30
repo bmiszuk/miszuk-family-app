@@ -1,2 +1,4 @@
 .notification-signout .link-button { min-height: 44px; padding: 0 6px; border: 0; background: transparent; color: var(--muted); font-size: 11px; }
 .notification-signout [role="alert"] { display: block; max-width: 280px; font-size: 12px; }
+.notification-choice { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.notification-choice input { width: 20px; height: 20px; min-height: 20px; }

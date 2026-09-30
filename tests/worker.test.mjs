@@ -13,7 +13,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', COZI_CALENDAR_URL:'https://rest.cozi.com/synthetic-private-feed' }, outboundService: async()=>new Response(readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8')), d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
       await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }
@@ -80,5 +80,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     assert.equal((await call('admin/accounts/'+account.id)).data.item.version,5);
     const production = await mf.dispatchFetch('https://family.miszuk.com/api/me');
     assert.equal(production.status, 503);
+    await (await mf.getWorker()).scheduled({scheduledTime:Date.parse('2026-01-01T14:00:00Z'),cron:'0 13,14 * * *'});
+    assert.equal((await db.prepare('SELECT count(*) n FROM notification_deliveries').first()).n,0,'sending kill switch applies to Cron handler');
   } finally { await mf.dispose(); }
 });

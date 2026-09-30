@@ -13,7 +13,7 @@ import {handleLocalEvents} from './calendar/localEvents.js';
 import { handleDirectory } from './directory/handler.js';
 
 export function createApiRouter() {
-  return async function handleApiRequest(request, env, member) {
+  return async function handleApiRequest(request, env, member, ctx) {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/me' && request.method === 'GET') {
@@ -29,7 +29,7 @@ export function createApiRouter() {
     const directory = url.pathname.match(/^\/api\/directory(?:\/(people|relationships)(?:\/([^/]+))?)?$/);
     if (directory) return handleDirectory(request, env, directory[1], directory[2], member);
     const household = url.pathname.match(/^\/api\/(groceries|news|events)(?:\/([^/]+))?$/);
-    if (household) return {groceries:handleGroceries,news:handleChat,events:handleLocalEvents}[household[1]](request, env, member, household[2]);
+    if (household) return {groceries:handleGroceries,news:handleChat,events:handleLocalEvents}[household[1]](request, env, member, household[2], ctx);
 
     if (url.pathname === '/api/families') {
       return handleFamilies(request, env);

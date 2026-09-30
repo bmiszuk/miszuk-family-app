@@ -3,6 +3,7 @@ import {bodyJson,HttpError} from '../shared/errors.js';
 import {jsonResponse} from '../shared/utils.js';
 import {rollout,requireRollout,categories,exactFields,revision,subscriptionInput,eligibleAccount,eligibilityArgs} from './policy.js';
 import {sendTest} from './sender.js';
+import {effectivePreferences} from './preferences.js';
 const view=r=>({id:r.id,device_label:r.device_label,enabled:Boolean(r.enabled),version:r.version,created_at:r.created_at,last_seen_at:r.last_seen_at,last_result:r.last_result});
 export async function handleNotifications(request,env,member) {
  const path=new URL(request.url).pathname,method=request.method,userId=member.account.id,db=env.DB;
@@ -34,7 +35,7 @@ export async function handleNotifications(request,env,member) {
  }
  if(path==='/api/notifications/preferences'&&method==='GET'){
   const row=await db.prepare('SELECT categories,version FROM notification_preferences WHERE user_id=?').bind(userId).first();
-  return jsonResponse({categories:Object.fromEntries(categories.map(k=>[k,row?JSON.parse(row.categories)[k]===true:false])),version:row?.version??0});
+  return jsonResponse({categories:effectivePreferences(row?JSON.parse(row.categories):{}),version:row?.version??0});
  }
  if(path==='/api/notifications/preferences'&&method==='PATCH'){
   const body=await bodyJson(request);exactFields(body,['categories','version']);

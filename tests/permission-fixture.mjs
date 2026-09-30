@@ -15,6 +15,7 @@ export function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
   db.exec(accountSeed);
   db.exec(readFileSync(new URL('../migrations/0009_push_notifications.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0010_notification_deliveries.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -37,7 +38,7 @@ export function fixture(t) {
     const response = await worker.fetch(new Request(`http://localhost${path}`, {
       method, headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...extra.headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-    }), { DB, LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', ...extra.env });
+    }), { DB, LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', ...extra.env }, extra.ctx);
     return { status: response.status, data: await response.json(), headers: response.headers };
   }
   return { db, request, DB };

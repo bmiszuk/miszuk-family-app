@@ -19,13 +19,13 @@ export default function Notifications({member}) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const load = async () => {
-    const [config, devices] = await Promise.all([api('notifications/config'), api('notifications/subscriptions')]);
-    setState({config, devices: devices.items});
+    const [config, devices, preferences] = await Promise.all([api('notifications/config'), api('notifications/subscriptions'), api('notifications/preferences')]);
+    setState({config, devices: devices.items, preferences});
   };
   useEffect(() => {
     let live = true;
-    Promise.all([api('notifications/config'), api('notifications/subscriptions'), registerWorker()]).then(([config, devices, worker]) => {
-      if (live) { setState({config, devices: devices.items}); setRegistration(worker); }
+    Promise.all([api('notifications/config'), api('notifications/subscriptions'), registerWorker(), api('notifications/preferences')]).then(([config, devices, worker, preferences]) => {
+      if (live) { setState({config, devices: devices.items, preferences}); setRegistration(worker); }
     }).catch(() => { if (live) setMessage('Unable to load notification settings. Try again later.'); });
     return () => { live = false; };
   }, []);
@@ -48,7 +48,9 @@ export default function Notifications({member}) {
         <button disabled={busy || !own || !state.config.sending_allowed} onClick={() => sendTest(own.id)}>Send test</button></div>
       <p>{state.devices.length} registered device{state.devices.length === 1 ? '' : 's'}.</p>
       {state.config.sending_allowed && state.devices.length > 0 && <><h3>Your devices</h3><p className="muted">To test a locked phone, send to it from another browser signed in as you. Wait one minute between tests.</p><ul>{state.devices.map(device => <li key={device.id}>{device.device_label || 'Browser device'}{device.id === own?.id ? ' · this device' : ''} <button disabled={busy || !device.enabled} onClick={() => sendTest(device.id)}>Send test to {device.device_label || 'device'}</button></li>)}</ul></>}
-      <p className="muted">Chat, polls, Dinner, Calendar, family dates and Vehicles notifications are future options and default off.</p></>}
+      <fieldset><legend>Notification categories</legend>
+        {[['birthdays','Birthdays'],['chat','Family Chat']].map(([key,label])=><label className="notification-choice" key={key}><input type="checkbox" checked={state.preferences.categories[key]} disabled={busy} onChange={event=>{const enabled=event.target.checked;perform(()=>api('notifications/preferences',{method:'PATCH',body:{version:state.preferences.version,categories:{...state.preferences.categories,[key]:enabled}}}));}} />{label}</label>)}
+      </fieldset><p className="muted">These choices apply to all your enrolled devices. Birthdays arrive at 8:00 AM Chicago time. Notifications show first names, never Chat message text.</p></>}
     {message && <p role="status">{message}</p>}<a href="#home">Back to Home</a>
   </section>;
 }

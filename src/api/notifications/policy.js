@@ -1,5 +1,5 @@
 import {HttpError} from '../shared/errors.js';
-export const categories=['chat','polls','dinner','calendar','family_dates','vehicles'];
+export {categories} from './preferences.js';
 export function rollout(env,userId) {
  // Config routes run after requireAccount; enrollment and sends additionally
  // recheck eligibleAccount in SQL. This switch never authenticates an account.
