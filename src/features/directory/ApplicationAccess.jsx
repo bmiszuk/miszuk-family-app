@@ -1,4 +1,4 @@
-import {AccountStatusControls,ProvisionAccess} from './AccountActions.jsx';
+import {AccountStatusControls,AccountSecurityControls,ProvisionAccess} from './AccountActions.jsx';
 import {useEffect,useState} from 'react';
 import {api} from '../../shared/client.js';
 import {ErrorMessage} from '../../shared/ui/Shared.jsx';
@@ -22,17 +22,17 @@ function AccountFields({item}) {
 export function PersonAccess({person,household,revision,onChanged}) {
  const {data,error}=useRead('admin/accounts?person_id='+encodeURIComponent(person.id),revision);
  return <section className="application-access" aria-label="Application Access"><h3>Application Access</h3><ErrorMessage error={error}/>
- {data?(data.items.length?<><AccountFields item={data.items[0]}/><AccountStatusControls key={data.items[0].version} item={data.items[0]} onChanged={onChanged}/></>:<><p>No application access</p><ProvisionAccess person={person} household={household} onChanged={onChanged}/></>):!error&&<p role="status">Loading access…</p>}</section>;
+ {data?(data.items.length?<><AccountFields item={data.items[0]}/><AccountStatusControls key={data.items[0].version} item={data.items[0]} onChanged={onChanged}/><AccountSecurityControls key={"security-"+data.items[0].version} item={data.items[0]} onChanged={onChanged}/></>:<><p>No application access</p><ProvisionAccess person={person} household={household} onChanged={onChanged}/></>):!error&&<p role="status">Loading access…</p>}</section>;
 }
 function AccountDetail({id,revision,onChanged}) {
  const {data,error}=useRead('admin/accounts/'+encodeURIComponent(id),revision);
- return <div><ErrorMessage error={error}/>{data?<><h4>{data.item.name}</h4><AccountFields item={data.item}/><AccountStatusControls key={data.item.version} item={data.item} onChanged={onChanged}/></>:!error&&<p role="status">Loading account…</p>}</div>;
+ return <div><ErrorMessage error={error}/>{data?<><h4>{data.item.name}</h4><AccountFields item={data.item}/><AccountStatusControls key={data.item.version} item={data.item} onChanged={onChanged}/><AccountSecurityControls key={"security-"+data.item.version} item={data.item} onChanged={onChanged}/></>:!error&&<p role="status">Loading account…</p>}</div>;
 }
 function AuditList({revision}) {
  const [offset,setOffset]=useState(0);
  const {data,error}=useRead('admin/security-audit?limit=10&offset='+offset,revision);
  return <section aria-label="Recent security changes"><h3>Recent security changes</h3><ErrorMessage error={error}/>
- {data?<><ul className="access-audit">{data.items.map((item,index)=><li key={offset+index}><strong>{item.action}</strong><small>{item.actor} · {new Date(item.occurred_at.replace(' ','T')+(item.occurred_at.endsWith('Z')?'':'Z')).toLocaleString()}</small></li>)}</ul>{!data.items.length&&<p>No security changes recorded.</p>}
+ {data?<><ul className="access-audit">{data.items.map((item,index)=><li key={offset+index}><strong>{item.action}</strong><small>{item.actor} · {new Date(item.occurred_at.replace(' ','T')+(item.occurred_at.endsWith('Z')?'':'Z')).toLocaleString()}</small>{item.target&&<small>{item.target} · {item.change}</small>}</li>)}</ul>{!data.items.length&&<p>No security changes recorded.</p>}
  <div className="actions"><button className="quiet" disabled={!offset} onClick={()=>setOffset(Math.max(0,offset-10))}>Newer changes</button><button className="quiet" disabled={data.next_offset===null} onClick={()=>setOffset(data.next_offset)}>Older changes</button></div></>:!error&&<p role="status">Loading security changes…</p>}</section>;
 }
 function Roster({revision,onChanged}) {

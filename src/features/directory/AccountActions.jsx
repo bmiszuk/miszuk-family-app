@@ -29,3 +29,29 @@ export function ProvisionAccess({person,household,onChanged}) {
  <div className="actions"><button>Review access</button><button className="quiet" type="button" onClick={()=>setOpen(false)}>Cancel</button></div></form>}
  </div>;
 }
+
+export function AccountSecurityControls({item,onChanged}) {
+ const [mode,setMode]=useState(null),[review,setReview]=useState(false),[email,setEmail]=useState(''),[confirmation,setConfirmation]=useState(''),[error,setError]=useState('');
+ const action=useAction(async()=>{});
+ const nextRole=item.role==='administrator'?'member':'administrator';
+ const cancel=()=>{setMode(null);setReview(false);setEmail('');setConfirmation('');setError('');};
+ const submit=async()=>{
+  const body=mode==='role'?{version:item.version,role:nextRole}:{version:item.version,login_email:email.trim().toLowerCase(),confirm_email:confirmation.trim().toLowerCase()};
+  if(await action.run(()=>api('admin/accounts/'+encodeURIComponent(item.id)+'/'+mode,{method:'POST',body}),'Account updated.')){
+   if(item.is_self&&mode==='role'){window.location.reload();return;}
+   cancel();await onChanged();
+  }
+ };
+ return <div className="application-access"><ErrorMessage error={action.error}/>{action.error&&<button className="quiet" onClick={onChanged}>Reload access information</button>}{error&&<p role="alert">{error}</p>}
+ {!mode?<div className="actions"><button className="quiet" onClick={()=>{setMode('role');setReview(true);}}>Change role</button>{!item.is_self&&<button className="quiet" onClick={()=>setMode('identity')}>Replace login email</button>}</div>
+ :review?<div className="editor" role="group" aria-label={mode==='role'?'Review role change':'Review identity replacement'}>
+ <h4>{mode==='role'?'Review role change':'Review identity replacement'}</h4><p>{item.name} · {item.approved_email}</p><p>Household · {item.household||'Not assigned'}</p>
+ {mode==='role'?<><p>Role: {item.role==='administrator'?'Administrator':'Member'} → {nextRole==='administrator'?'Administrator':'Member'}</p><p className="muted">{nextRole==='administrator'?'Administrator can manage application access, households and relationships. Promote only someone entrusted with these responsibilities.':'Administrator capabilities will be removed. The last usable Administrator cannot be demoted.'} Account status stays {item.status}.</p></>
+ :<><p>New approved login email · {email.trim().toLowerCase()}</p><p className="muted">{item.status==='disabled'?'This account stays disabled.':'Current application access will stop and this account becomes Pending.'} The existing login binding will be cleared. The new approved email must complete verified Cloudflare sign-in before access can resume. This does not change Cloudflare admission or send an invitation.</p></>}
+ <div className="actions"><button disabled={action.busy} onClick={submit}>{mode==='role'?(nextRole==='administrator'?'Confirm promotion':'Confirm demotion'):'Confirm identity replacement'}</button><button className="quiet" disabled={action.busy} onClick={cancel}>Cancel</button></div>
+ </div>:<form className="stack-form editor" onSubmit={event=>{event.preventDefault();if(email.trim().toLowerCase()!==confirmation.trim().toLowerCase()){setError('The login emails must match.');return;}setError('');setReview(true);}}>
+ <label>New approved login email<input type="email" required maxLength={254} autoComplete="off" value={email} onChange={e=>setEmail(e.target.value)}/></label>
+ <label>Confirm new login email<input type="email" required maxLength={254} autoComplete="off" value={confirmation} onChange={e=>setConfirmation(e.target.value)}/></label>
+ <div className="actions"><button>Review identity replacement</button><button className="quiet" type="button" onClick={cancel}>Cancel</button></div></form>}
+ </div>;
+}

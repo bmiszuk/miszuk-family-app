@@ -68,6 +68,16 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     const disabled=await call('admin/accounts/'+account.id+'/disable','POST',{version:1});assert.equal(disabled.status,200);
     const enabled=await call('admin/accounts/'+account.id+'/enable','POST',{version:2});assert.equal(enabled.status,200);assert.equal(enabled.data.item.status,'pending');
     assert.equal((await call('admin/accounts/local-account/disable','POST',{version:1})).status,409);
+    const promoted=await call('admin/accounts/'+account.id+'/role','POST',{version:3,role:'administrator'});
+    assert.equal(promoted.status,200);assert.equal(promoted.data.item.role,'administrator');
+    assert.equal((await call('admin/accounts/local-account/role','POST',{version:1,role:'member'})).status,409,'pending Administrator is not a recovery account');
+    const replaced=await call('admin/accounts/'+account.id+'/identity','POST',{version:4,login_email:'replacement@example.test',confirm_email:'replacement@example.test'});
+    assert.equal(replaced.status,200);assert.equal(replaced.data.item.version,5);assert.equal(replaced.data.item.identity_state,'awaiting_first_sign_in');
+    const securityChanges=(await call('admin/security-audit')).data.items;
+    assert.ok(securityChanges.some(item=>item.change==='runtime@example.test → replacement@example.test'));
+    await db.prepare("CREATE TRIGGER fail_role_audit BEFORE INSERT ON security_audit WHEN NEW.action='account.role' BEGIN SELECT RAISE(ABORT,'test audit failure'); END").run();
+    assert.equal((await call('admin/accounts/'+account.id+'/role','POST',{version:5,role:'member'})).status,500);
+    assert.equal((await call('admin/accounts/'+account.id)).data.item.version,5);
     const production = await mf.dispatchFetch('https://family.miszuk.com/api/me');
     assert.equal(production.status, 503);
   } finally { await mf.dispose(); }

@@ -14,7 +14,7 @@ test('Member denial precedes account/audit queries; read-only methods and Phase 
 test('sanitized accounts distinguish no access, roles, approved email, binding and lifecycle states',async t=>{
  const {db,request}=fixture(t);db.exec("UPDATE app_users SET role='administrator'; UPDATE people SET login_email='legacy-not-approved@example.test'");
  const self=(await request('/api/admin/accounts/local-account')).data.item;
- assert.deepEqual(Object.keys(self).sort(),['id','person_id','name','status','role','version','approved_email','identity_state','household'].sort());
+ assert.deepEqual(Object.keys(self).sort(),['is_self','id','person_id','name','status','role','version','approved_email','identity_state','household'].sort());
  assert.equal(self.approved_email,'family@localhost');assert.equal(self.identity_state,'bound');assert.equal(self.role,'administrator');
  assert.ok(!(JSON.stringify(self).includes('local-development')));assert.ok(!(JSON.stringify(self).includes('legacy-not-approved')));
  const added=(await request('/api/directory/people','POST',{first_name:'No account'})).data.item;

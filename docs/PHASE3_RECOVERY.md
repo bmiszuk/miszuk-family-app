@@ -35,3 +35,9 @@ The Step 2 checkpoint is `pre-users-phase4-step2-2026-09-29` (`eb4f2bc`). This p
 ## Phase 4 Step 3 recovery
 
 Checkpoint `pre-users-phase4-step3-2026-09-29` (`f429d4d`) is a security-preserving frontend/backend rollback: it removes account mutation controls while retaining authoritative account status, secure first-use activation, and Step 1 restrictions. Preserve newly provisioned accounts, disabled states, bindings and audits; never restore a pre-change D1 snapshot merely to roll back code. No migration is required. The previously tested private account-aware maintenance bundle remains the fail-closed emergency fallback; its checksum is reverified before deployment. Independent operator recovery stays separate from application controls.
+
+## Phase 4 Step 4 recovery
+
+Checkpoint `pre-users-phase4-step4-2026-09-30` (`a1d93df`) retains the account gate, Step 1 restrictions and Step 3 status administration. A matched frontend/backend rollback removes role/identity replacement controls while respecting current roles, approved identities and disabled states. Preserve all D1 data, revisions and audits; never restore the pre-change database merely to roll back code. No migration is needed.
+
+The private `phase4-step4-account-recovery-worker.mjs` bundle and SHA-256 file are rebuilt and tested with the current account resolver. The matching private deployment helper requires `--deploy-maintenance` and preserves existing Cloudflare bindings. This fail-closed maintenance option remains available if a normal rollback is insufficient. Own-identity correction requires the independently authenticated operator procedure above, not a self-service exception. Do not guess a replacement subject or weaken Access/account enforcement.

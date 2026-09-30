@@ -15,9 +15,9 @@ function email(value) {
 // All guards run inside the D1 batch. NOT NULL constraints abort the transaction;
 // failure of the final audit insert rolls back every prior write.
 export async function mutateAccount(request,env,member,id,operation) {
- if(!can(member,'account.'+operation))throw new HttpError(403,'Administrator access required.');
+ if(!can(member,operation==='role'?'account.role.change':operation==='identity'?'account.identity.replace':'account.'+operation))throw new HttpError(403,'Administrator access required.');
  const body=await bodyJson(request),db=env.DB;
- const keys=operation==='provision'?['person_id','person_version','login_email','confirm_email']:['version'];
+ const keys=operation==='provision'?['person_id','person_version','login_email','confirm_email']:operation==='role'?['version','role']:operation==='identity'?['version','login_email','confirm_email']:['version'];
  if(Object.keys(body).some(key=>!keys.includes(key)))throw new HttpError(400,'Unsupported account fields.');
  const issuer='https://'+env.ACCESS_TEAM_DOMAIN;
  const actor=`EXISTS(SELECT 1 FROM app_users actor JOIN people ap ON ap.id=actor.person_id
@@ -25,6 +25,48 @@ export async function mutateAccount(request,env,member,id,operation) {
  AND actor.role='administrator' AND ap.deleted_at IS NULL AND ai.provider='cloudflare_access'
  AND ai.issuer=? AND ai.subject=? AND ai.login_email=? AND ai.bound_at IS NOT NULL)`;
  const actorArgs=[member.account.id,issuer,member.id,member.email.trim().toLowerCase()];
+ if(operation==='role'||operation==='identity') {
+  const version=revision(body.version);
+  const otherAdministrator=`EXISTS(SELECT 1 FROM app_users other JOIN people op ON op.id=other.person_id
+   JOIN user_identities oi ON oi.user_id=other.id WHERE other.id<>u.id AND other.status='active'
+   AND other.role='administrator' AND op.deleted_at IS NULL AND oi.provider='cloudflare_access'
+   AND oi.issuer=? AND length(trim(oi.subject))>0 AND oi.bound_at IS NOT NULL)`;
+  const before=await db.prepare('SELECT u.role,u.status,u.version,i.login_email FROM app_users u LEFT JOIN user_identities i ON i.user_id=u.id WHERE u.id=?').bind(id).first();
+  if(!before||before.version!==version)throw new HttpError(409,'Account changed. Refresh and review before retrying.');
+  let guard,guardArgs,details,assignments,assignmentArgs,identityUpdate;
+  if(operation==='role') {
+   if(!['member','administrator'].includes(body.role))throw new HttpError(400,'Choose Member or Administrator.');
+   guard=`u.role<>? AND (?='administrator' OR ${otherAdministrator})`;
+   guardArgs=[body.role,body.role,issuer];
+   details={old_role:before.role,new_role:body.role};assignments='role=?';assignmentArgs=[body.role];
+  } else {
+   if(id===member.account.id)throw new HttpError(403,'Your own login identity requires operator recovery.');
+   const approved=email(body.login_email);
+   if(approved!==email(body.confirm_email))throw new HttpError(400,'The login emails must match.');
+   guard=`u.id<>? AND EXISTS(SELECT 1 FROM user_identities i WHERE i.user_id=u.id
+    AND i.provider='cloudflare_access' AND i.issuer=? AND i.login_email<>?)
+    AND NOT EXISTS(SELECT 1 FROM user_identities WHERE issuer=? AND login_email=?)`;
+   guardArgs=[member.account.id,issuer,approved,issuer,approved];
+   details={old_email:before.login_email,new_email:approved,old_status:before.status,new_status:before.status==='disabled'?'disabled':'pending'};
+   assignments="status=CASE WHEN status='disabled' THEN 'disabled' ELSE 'pending' END";assignmentArgs=[];
+   identityUpdate=db.prepare('UPDATE user_identities SET login_email=?,subject=NULL,bound_at=NULL,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').bind(approved,id);
+  }
+  // The pre-read only supplies audit metadata. The mutation rechecks the exact
+  // revision and all authority/integrity guards transactionally before writing.
+  const update=db.prepare(`UPDATE app_users AS u SET version=CASE WHEN ${actor} AND u.version=? AND ${guard}
+   THEN version+1 ELSE NULL END,${assignments},updated_at=CURRENT_TIMESTAMP WHERE u.id=?`)
+   .bind(...actorArgs,version,...guardArgs,...assignmentArgs,id);
+  const audit=db.prepare(`INSERT INTO security_audit(id,actor_type,actor_user_id,action,target_type,target_id,details)
+   VALUES(CASE WHEN EXISTS(SELECT 1 FROM app_users WHERE id=? AND version=?) THEN ? ELSE NULL END,
+   'user',?,?,'app_user',?,?)`)
+   .bind(id,version+1,crypto.randomUUID(),member.account.id,'account.'+operation,id,JSON.stringify(details));
+  try {await db.batch([update,...(identityUpdate?[identityUpdate]:[]),audit]);}
+  catch(error) {
+   if(/NOT NULL constraint failed|UNIQUE constraint failed/.test(String(error.message)))throw new HttpError(409,'Account changed, identity is reserved, or another usable Administrator is required. Refresh and review before retrying.');
+   throw error;
+  }
+  return id;
+ }
  let target=id,statements=[],expectedVersion,details;
  if(operation==='provision') {
   if(!isUuid(body.person_id))throw new HttpError(400,'Choose an existing Directory person.');

@@ -92,5 +92,6 @@ test('D1 concurrent activation is atomic and creates exactly one binding audit',
  assert.equal((await DB.prepare("SELECT count(*) AS n FROM security_audit WHERE action='identity.bind'").first()).n,1);
  assert.deepEqual(await provisionApprovedMembers(DB,'admin',[entry]),{created:0,alreadyProvisioned:1});
  assert.equal((await DB.prepare("SELECT subject FROM user_identities WHERE id='i1'").first()).subject,principal.id);
+ assert.equal((await DB.prepare("SELECT version FROM app_users WHERE id='u1'").first()).version,2);
  }finally{await mf.dispose();}
 });
