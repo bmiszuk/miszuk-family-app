@@ -64,6 +64,8 @@ Follow the [development and technical-health principles](../ARCHITECTURE.md#deve
 
 After roughly 2–4 meaningful feature projects from the September 30, 2026 whole-project review, perform a focused architecture/technical-health review; repeat that cadence thereafter, or sooner for a concrete risk. Record the review checkpoint and actionable findings here. This is not a scheduled deployment or a standing refactoring project. Maintain successor/recovery instructions as part of each relevant change rather than postponing them until that review.
 
+The October 1, 2026 checkpoint is recorded in [Technical Health Review](TECHNICAL_HEALTH_REVIEW.md). It found the architecture coherent; before Vehicles, reconcile the D1 migration ledger, make successor recovery documentation operational, and resolve Vehicles' explicit ownership/storage decisions.
+
 ## Small worthwhile maintenance / documentation debt
 
 These concrete items remain open; general health reviews do not replace or close them. Record evidence when an item is resolved.
