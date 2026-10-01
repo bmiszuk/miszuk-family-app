@@ -1,125 +1,121 @@
-# Family Polls / Surveys — proposed initial design
+# Family Polls / Surveys — V1 requirements and design
 
-Status: design proposal, September 30, 2026. **Not implemented or approved for implementation.** Based on application baseline `4d3b89c` and the current repository documentation. Recommendations below need the decisions listed at the end before implementation. This document does not authorize schema, infrastructure or production changes.
+Status: revised September 30, 2026 to record Bob's decisions. **Documentation only; Polls is not implemented and implementation is not authorized by this document.** Existing application baseline is `4d3b89c`. The notification rollout question at the end remains open; the core household, voting, creation and expiration decisions below are settled.
 
-## Purpose and smallest useful scope
+## Purpose and agreed scope
 
-Help a family member ask a specific group one practical question and see who answered what. Examples:
+A household member asks one practical question and everyone in that household with an active application account can answer. Examples:
 
-- “Will you be home for dinner Saturday, October 3?” — Yes / No / Not sure.
-- “Which day works best for a family visit?” — Saturday / Sunday / Neither.
-- “Which meal would you prefer?” — a short list of choices.
+- “Who will be home Saturday for dinner?” — Yes / No / Maybe.
+- “What should we have for dinner?” — Chicken / Hamburgers / Spaghetti.
 
-Use **Polls** as the UI name. Version 1 is one question per poll, single-choice, identifiable answers, a selected audience and a closing deadline. It is not a general survey builder, scheduling engine or meal-planning system. Dinner attendance does not assign the existing Dinner cook/signup or change Calendar events.
+V1 has **one question and single-choice answers**: each respondent selects exactly one option, and may change that answer while the poll is active. Several polls may be active simultaneously. Named results are shared with household poll recipients. This is not a survey builder or meal-planning system; attendance answers do not assign the existing Dinner cook/signup or modify Calendar.
 
-Single-choice covers the first use case cleanly. Multiple-choice is useful for “select every day that works,” but adds different validation/results semantics; defer it until requested. Free-text answers, “Other” text, comments, multiple questions, ranked voting and attachments are not worthwhile initially. The creator can put “Not sure” or “None of these” in the choices when appropriate.
+## iPhone simplicity — primary requirement
+
+Normal creation requires only **question + answer choices**, followed by **Create poll**. Provide a one-tap **Yes / No / Maybe** template that fills editable choice fields. Custom choices use the same small form; no wizard, drag-and-drop or separate mandatory review screen.
+
+Do not ask for recipients, household selection, deadline, privacy, notification settings or other configuration. Show a short passive explanation: “For your household · closes automatically in 7 days · named results.” Server derives household and audience from the authenticated account. Suggested bounds: question up to 240 characters, 2–8 distinct trimmed options of up to 100 characters. The template is a convenience, not a different question type.
+
+Use stacked radio choices with approximately 44px touch rows, one **Submit answer** button, compact confirmation, and **Change answer** while active. After submission show option counts and the user's answer, not an empty success screen. Names can expand beneath results; avoid wide tables or a large permanent name list. Show vote totals as people, never count one person more than once. “Not answered” is distinct from “No.”
 
 ## Existing foundations to reuse
 
-- [Architecture](../ARCHITECTURE.md): one React app, Worker and D1; `src/features/polls` would own its page and Home summary, `src/api/polls` its handlers, and small pure rules can live in `src/domain`. No new service, framework, queue or datastore is justified.
-- [Accounts and permissions](USERS_PERMISSIONS.md): every API is behind the verified Access → active account → active Directory person gate. Link ownership and responses to stable `app_users.id`; use linked Directory names for display. No parallel users, email identity or Directory-only voters.
-- `src/api/shared/permissions.js`: add explicit Poll actions, with authoritative resource checks and SQL scope. Parent/spouse/household rules and Administrator role confer no extra Poll rights.
-- `src/features/home/Home.jsx`: preserve the existing Groceries/Dinner/Calendar/Chat grid and Family Dates order. Polls owns a compact summary, not a second Home implementation.
-- Existing `api`, error/access handling, `useAction`, version-conflict handling and visible/focus refresh patterns can be reused. Do not independently poll the same summary from multiple mounted components.
-- [Notifications](NOTIFICATIONS.md): reuse account preferences, own-device enrollment, VAPID, send-time eligibility and the transport. The reserved `polls` preference currently defaults Off; it is not a working trigger. The delivery-ledger CHECK and preference SQL currently allow only birthdays/chat, and recipient selection currently scans enrolled accounts. Poll sending therefore requires deliberate changes, not merely a new category label.
+- [Architecture](../ARCHITECTURE.md): keep one React app, Worker and D1. Polls owns its feature page/Home summary and API under `src/features/polls` and `src/api/polls`; small pure rules may live in `src/domain`. No new service, generic form engine, queue or datastore is justified.
+- [Accounts and permissions](USERS_PERMISSIONS.md): verified Access → active account → active Directory person remains mandatory. Store ownership/answers by stable `app_users.id`, display Directory names, and use the account's current active household. No parallel identity, email mapping or Directory-only voter.
+- Add explicit Poll actions to the shared permission layer and enforce household scope in SQL for reads and writes. Reuse the no-household error pattern; do not reinstate a default-household fallback. Parent/spouse relationships and Administrator role provide no bypass or proxy vote.
+- Reuse browser API/access-error handling, version-conflict handling, compact forms and existing visible/focus refresh patterns. Share summary loading rather than adding duplicate background polling.
+- Preserve the Home Groceries/Dinner/Calendar/Chat grid, Family Dates ordering and bottom-navigation clearance. Polls owns a bounded summary rather than redesigning Home.
+- [Notifications](NOTIFICATIONS.md): reuse preferences, devices, VAPID, sender lifecycle and eligibility checks. The reserved `polls` preference currently defaults Off, while the claim ledger and preference SQL permit only birthdays/chat. Poll delivery is not already implemented merely because that key exists.
 
-## Audience and identity
+## Household audience and membership
 
-Recommend an explicit list of **active provisioned accounts with active Directory people**, selected when publishing. Accounts awaiting first use but already active may be selected; pending/disabled accounts and people without accounts cannot. They can participate in future polls after activation. Explain excluded Directory-only people without offering proxy voting.
+Every new poll belongs permanently to the creator's current household and automatically includes **all active app users with active Directory people assigned to that household, including the creator**. There is no recipient picker, exclusion list, all-family mode or household override. People without accounts and pending/disabled accounts do not receive a ballot. Active approved/unbound accounts can be included; normal secure first-use binding is still required before access.
 
-The picker displays Directory names (disambiguated with surname), never approved emails, roles, binding states or Cloudflare IDs. A small Poll-specific recipient lookup may return person IDs/names and household grouping; the server resolves and validates their accounts. Do not expose the Administrator roster to Members.
+Conservative membership rule for implementation: automatically snapshot those accounts at creation in `poll_recipients`, and additionally require current membership in the poll's active household on every request/send. The snapshot is server-generated, never a client-selected audience. A household move never moves the poll or grants continued access to the old household; creator powers are also lost outside that household. New accounts/new household members join future polls, not old polls. This preserves the original response denominator and avoids silently exposing earlier household questions/history to newcomers.
 
-“My household” and “All current users” may be selection shortcuts, but show the actual people for review. Start with no recipients selected. Store the resolved list at publication: future accounts or household moves do not silently join or leave. This is an explicit audience grant, not household authorization inheritance. Creators may include themselves but are not automatically respondents. Require at least one recipient.
+Disabling an account or deactivating its person immediately removes access and push eligibility, without deleting its historical answer. Restoring the same account in the same household restores access to its snapshotted polls. Retain answers from recipients who leave/become inactive as part of that poll's results, label them unavailable where appropriate, and do not count them as currently awaiting a response. Names/answers are poll history, not permission to read those people's new household data. Identity replacement retains stable account ownership and ordinary pending/binding/device-invalidation protections.
 
-Disabled/inactive users immediately lose read, answer and push access through existing checks; retain their historical answers. If restored, the same selected account regains access while the poll exists. Identity replacement keeps the same account/participation, with normal pending/binding and device invalidation protections. A disabled creator's poll remains available to its recipients until its deadline; there is no automatic ownership transfer or Administrator takeover.
+If a creator is disabled or leaves, no automatic ownership transfer or Administrator takeover occurs; automatic seven-day expiration still ends the poll. These conservative membership edge rules are explicit defaults, not additional creation settings.
 
-## Recommended authorization and results policy
+## Authorization and results
 
-All actions require the current active-account/person gate. No household is required.
+All operations require an active account/person **and the poll's current household membership**, plus snapshot membership. No-household accounts cannot create, list, answer or read Polls. Inaccessible IDs return not-found behavior without leaking question/results.
 
-| Proposed action | Who may perform it |
+| Proposed action | Rule |
 |---|---|
-| `poll.create` | Any active Member or Administrator; same rules for both. |
-| `poll.read` / list | Creator or explicitly selected recipient only; enforce in SQL, including history and Home summaries. |
-| `poll.respondOwn` | Selected recipient, on their own behalf, while open. Creator only if also selected. |
-| `poll.closeOwn` | Creator, while open, using expected poll version. |
-| `poll.results.readOwn` | Creator only: named answers, totals and unanswered recipients. |
-| Edit question/choices/audience | Before publish in the local form only. No changes after publication, even before the first response. |
-| Edit response | Respondent may replace their own choice until closing, with response revision checks. |
-| Delete, reopen, impersonate, moderate | Not in version 1. Close a mistaken poll and publish a corrected one. |
+| `poll.create` | Any active household Member or Administrator, for their own household only. |
+| `poll.read` / list / summary | Household poll recipient; scope all queries, including history and counts. |
+| `poll.respondOwn` | Recipient's own single answer while active; includes creator. |
+| `poll.results.read` | Any authorized household poll recipient, not just creator. |
+| `poll.closeOwn` | Creator only, while active, with expected poll version and current household access. |
+| Edit question/choices | Before creation in the local form only. After creation, close and create a corrected poll. |
+| Edit response | Own choice only, with response revision check, until close/expiration. |
+| Delete, reopen, impersonate, moderate | Not in V1; no Administrator exception. |
 
-Recommend **identifiable responses, creator-only results** for version 1. Dinner attendance needs names, and limiting results avoids disclosing availability to the whole family. Tell respondents before submitting: “Your name and answer are visible to [creator].” Other respondents see the question/options, creator, deadline and their own answer, not the audience roster, others' answers or aggregate counts. Creator results are available immediately and after closure; always distinguish “Not answered” from “No.” Show inactive recipients separately in progress, retaining answers and the original audience denominator rather than silently dropping them.
+Named results and counts are available to authorized recipients during the poll and in history. The voting view emphasizes answering first; a results disclosure may be opened before voting, but voting is not a privacy gate. After voting, results and the selected answer become the primary view, with a clear change-answer control while active. Explain briefly that names and answers are visible to household poll recipients. No privacy mode or anonymous claim is offered. Ordinary application Administrators cannot browse another household's polls; independently authorized database operators can access stored records as elsewhere in the app.
 
-Do not offer an “anonymous” checkbox initially. Anonymity in a small family is difficult to promise, and ordinary backups/operator access would still identify the responder in this design. If anonymous or participant-visible results are wanted later, design their disclosure/storage rules explicitly before implementation. A normal application Administrator is not entitled to read arbitrary polls; independently authorized database operators remain capable of accessing stored data, as elsewhere in this app.
+## Proposed data model — not a migration
 
-## Proposed data model — design, not a migration
+One poll row holds the question; no generic questionnaire/question hierarchy is needed.
 
-One poll row is the question; no generic questionnaire/question table is needed.
-
-| Proposed table | Minimum fields and constraints |
+| Table | Minimum fields/constraints |
 |---|---|
-| `polls` | `id`, `creator_user_id` → `app_users`, `question`, required `closes_at` (UTC), nullable `closed_at` (manual close), `created_at`, `updated_at`, `version`. No redundant expired boolean. |
-| `poll_options` | `poll_id` → `polls`, stable option ID, label, position. Unique `(poll_id, id)` and `(poll_id, position)`; immutable once published. |
-| `poll_recipients` | `(poll_id, user_id)` primary key, restrictive references to poll/account. Explicit publication snapshot. No copied email, birthday or household security identity. |
-| `poll_responses` | `(poll_id, user_id)` primary key; composite FK to recipient membership; `option_id` with composite FK to the same poll's option; `created_at`, `updated_at`, `version`. One current answer, no answer-history table initially. |
+| `polls` | `id`, restrictive `household_id` and `creator_user_id` references, question, server-set UTC `created_at` and `expires_at`, nullable manual `closed_at`, `updated_at`, `version`. Household/expiration immutable. |
+| `poll_options` | Poll reference, stable option ID, label, position; unique poll/option and poll/position. Immutable after creation. |
+| `poll_recipients` | Primary key `(poll_id,user_id)`, restrictive poll/account references; automatic household-account snapshot. No copied emails or user-supplied recipients. |
+| `poll_responses` | Primary key `(poll_id,user_id)`, composite FK to recipient membership, one non-null `option_id` with composite FK to that poll's option; timestamps and version. One current answer; no answer-history table initially. |
 
-Use restrictive foreign keys; do not cascade away account-linked history. Index recipient lookups by user/poll and creator lists by creator/creation time; keep bounded pagination. Suggested input limits: question 240 characters, 2–8 distinct trimmed options of up to 100 characters. These are implementation bounds, not reasons to build a schema framework.
+Index household/creation-time lists, recipient lookups and creator lookups; bound list/history pagination. Preserve account-linked history using restrictive references. A retired household is inaccessible even if historical records remain; Polls must not weaken current household retirement protections.
 
-Publish poll/options/recipients in one D1 transaction, rechecking creator and recipient eligibility; reject the entire operation if any submitted recipient is unavailable. Never partially publish. Use a client-generated request/poll UUID scoped and checked against the creator to make identical creation retries idempotent; a different payload with the same key conflicts, and a collision must reveal no foreign poll.
+Create poll/options/automatic recipients in one D1 transaction. Recheck the actor's active account/person/household and derive audience in SQL at creation time. Reject client fields for recipients, author, household, expiration, privacy and per-poll notification control. Use a client-generated request/poll UUID checked against creator and payload for idempotent identical retries; mismatched reuse conflicts without exposing a foreign poll. Never partially create a poll or silently change an existing poll's audience during a retry.
 
-Respond using trusted current account, never a supplied author. In the atomic write recheck active account/person, recipient membership, poll open status and deadline, option ownership and expected response version (0 for first answer). Concurrent first answers cannot insert duplicates. Close and response writes must serialize correctly: a response committed before close remains; one attempted after effective closing fails. Failed writes return the existing conflict/error pattern; refresh instead of silently overwriting. Do not use a read-then-write check as the sole permission or deadline guard.
+For answers, atomically recheck current active account/person/household, recipient membership, open state/server expiry, same-poll option and expected response version (0 for first response). One answer means exactly one choice, not a set or free-text value. Concurrent first responses cannot duplicate a ballot; stale edits conflict. Serialize close/answer races: a response committed before effective closing stays; later writes fail. Never rely solely on preflight permission or time checks.
 
-Proposed routes: `GET /api/polls/recipients` (sanitized picker), `GET /api/polls` (scoped open/history/created lists, bounded), `GET /api/polls/summary` (own unanswered count/nearest deadline), `POST /api/polls`, `GET /api/polls/:id`, `PUT /api/polls/:id/response`, `POST /api/polls/:id/close`, `GET /api/polls/:id/results`. Use explicit response serialization and not-found behavior for inaccessible polls. Creator-only result fields must never be sent to recipient clients and merely hidden. Final paths can follow implementation conventions without changing these boundaries.
+Proposed routes: `GET/POST /api/polls`, `GET /api/polls/summary`, `GET /api/polls/:id`, `PUT /api/polls/:id/response`, `POST /api/polls/:id/close`, `GET /api/polls/:id/results`. No recipient-picker endpoint. Responses explicitly serialize display data, never account/security records; API filtering is authoritative. Final route details may follow implementation conventions without changing this policy.
 
-## Closing and history
+## Automatic expiration and history
 
-Recommend a required deadline, default seven days ahead, clearly editable during creation. Enter/display in **America/Chicago**, store an unambiguous UTC instant; show the timezone and reject/resolve ambiguous or nonexistent DST input explicitly. A dinner-attendance question should include the actual date in its text; the response deadline is separate from the dinner date.
+Server sets expiration to **creation instant + 7 × 24 hours**. Store UTC and display in established **America/Chicago** time; this fixed duration is unambiguous across DST. Do not parse dates, weekdays, “Saturday,” or other natural-language time references from the question. Do not offer a deadline picker or automatic event integration. A question about an earlier event still remains open until early close or seven-day expiry.
 
-Effective open = no manual `closed_at` and server time before `closes_at`. No scheduled job is needed to expire polls: reads and writes derive closure from time. Client clocks only help presentation. Creator can close early with confirmation; no deadline extension or reopening initially. Closing removes unanswered prompts immediately on refresh, freezes answers and preserves history. Historical polls remain available to their creator and recipients under the same visibility rules. No automatic deletion/retention policy is invented; decide retention later if needed. No duplicate “archived” state is necessary.
+Effective active = no manual `closed_at` and server time before `expires_at`. Expiration needs no Cron: reads/writes derive it from server time. Creator can optionally close early with a small confirmation. No extending/reopening in V1. Closing/expiration freezes answers, removes active/unanswered prompts and puts the poll in History under unchanged access rules. “Moves to history” is a query/UI classification, not data copying/deletion. History remains paginated; no speculative retention/deletion policy or redundant archived boolean.
 
-## Home, unanswered prompts and mobile UI
+## Multiple polls, Home and navigation
 
-- Add a compact Polls strip above the existing Home grid, preserving current card order and bottom-navigation clearance. Show the nearest-closing unanswered question, deadline, count of other unanswered polls, and “Answer” / “Open polls.” If none await an answer, retain just a small “Polls” entry so creators can start a poll or view results/history.
-- Interpret login prompting as a nonblocking “You have N polls to answer” notice after account resolution. If landing outside Home, show a compact link to Polls; do not force a redirect or modal. “Not now” suppresses this extra notice for the current tab session; Home/list still shows the outstanding poll. Store only an account-scoped dismissal marker, clear it on sign-out/account change, and do not store questions/answers locally. No per-user snooze table initially. A new tab/session can prompt again; this behavior needs Bob's agreement.
-- Answered, closed and inaccessible polls never count as unanswered. A push opt-out does not hide in-app polls. Refresh on successful response/close, focus and while relevant views are visible using existing patterns; errors must not block the rest of Home.
-- Add `#polls` as a secondary destination, like Dinner/Notifications, reached from Home. No sixth permanent bottom-navigation button or broad navigation redesign. The initial page can expand a selected poll in place; direct question links are optional later.
-- Mobile: short open-poll list, radio choices with roughly 44px touch rows, one explicit “Submit answer” button, small saved status and “Change answer” until close. Creator gets a compact named-response list grouped by choice plus unanswered names. Creation is question → choices → recipients/deadline → review/publish. No drag-and-drop, wide tables or desktop-only controls. Unsaved form fields remain local drafts, not saved draft polls.
+- Multiple active polls are allowed; never replace an earlier one when creating another.
+- Home has **one compact Polls area**, showing at most the nearest-expiring unanswered poll and a count/link for additional unanswered/active polls. Do not stack full questionnaires or one large card per poll. Preserve the existing card order and desktop grid.
+- Answered active polls are secondary: a small “View active polls/results” link/count, not the primary prompt. When none await an answer, keep a modest Polls entry for creation, active results and History. Closed/inaccessible polls never contribute to unanswered counts.
+- Polls page prioritizes unanswered active polls, then answered active polls, with separate History access. Answered rows show the user's answer and a results link. Expiration and manual closure update on save/focus/visible refresh; a server rejection overrides any stale client “active” display.
+- After sign-in, the Home summary is the normal prompt. If the user lands on another section, a small nonblocking unanswered-count link may be shown with “Not now” for that tab session; no modal, forced redirect or mandatory answer. Keep only an account-scoped dismissal marker, clear on sign-out/account change, and store no poll content locally. This is an in-app discovery aid, not a repeated reminder workflow.
+- Use a secondary `#polls` destination reached from Home, like Dinner/Notifications. Do not add a sixth permanent mobile bottom-navigation button or build a general navigation overhaul. Errors in Polls must not block existing Home features.
 
-## Push proposal — a separately verifiable integration step
+## Narrow notification proposal
 
-Recommend **one new-poll announcement**, not repeated reminders: after a successful publish, notify selected eligible recipients other than the creator, only while the poll remains open and they have not answered. Recheck membership, unanswered/open state and existing active account/person/bound-identity/device protections immediately before dispatch. These checks reduce stale sends, but a response/close after provider acceptance cannot recall a push.
+Household scope makes **one new-poll announcement** sufficient. Recommend a separately verifiable integration step: after successful creation, notify other snapshotted household recipients who are currently eligible, enrolled, opted in, and have not yet answered. Include the creator in voting but **exclude the creator from their own push**. Recheck current household, snapshot membership, active/unanswered poll state, account/person/bound identity and device eligibility just before sending.
 
-Payload: **Family Poll / A new family poll is ready for your response.** No question, choices, deadline, household or answer on the lock screen. Tap **Home** initially; the Polls strip then leads to the question. This reuses the service worker's existing Home destination and avoids incompatible payload/deep-link changes on installed devices.
+Use **Family Poll / A new household poll is ready for your response.** Include no question, choices, names, votes or other household detail on the lock screen. Tap Home to reach its prioritized Polls area, reusing the existing supported service-worker destination. No new deep-link protocol is needed.
 
-Expose one account-wide **Polls** switch when this integration ships. Recommend preserving the reserved preference's current **Off** default and all explicitly saved values; users turn it on voluntarily. It remains independent of device enrollment and Birthday/Chat preferences. Bob can choose a different default explicitly before implementation; do not silently infer consent from existing Chat enrollment.
+Keep preference control in **Notifications**, not creation: one account-wide **Polls** switch, separate from device enrollment and Birthday/Chat preferences. Recommendation: preserve its current **Off** default and existing explicitly saved values. In-app polls work regardless of that switch. Whether to ship this push step with the first release or shortly afterward still needs Bob's choice; no per-poll notification checkbox is needed.
 
-Reuse the existing sender, provider lifecycle, kill switches and at-most-once event/account claims, using an event key such as `poll-published:<id>`. Extend the existing ledger's category constraint with a data-preserving migration only when adding this trigger; SQLite CHECK constraints cannot simply be enabled by a UI change. Extend preference handling deliberately. Recipient eligibility must be supplied by Polls and revalidated in the dispatch path; never broadcast to all enrolled accounts and filter only in the UI. Preserve birthday/chat claims and regression behavior. Post-commit notification failures never fail or roll back publication. Duplicate publish retries do not reannounce; enabling notifications later does not replay old announcements.
+Reuse sender lifecycle/kill switches and at-most-once event/account claims keyed by poll creation. Extend the category CHECK via a data-preserving migration and extend preference handling only when implementing push. Limit claims and dispatch to eligible household recipients, not every enrolled account. Preserve all Birthday/Chat claims and behavior. Publication success must not depend on provider success. Idempotent creation retries do not reannounce; later enrollment/opt-in does not replay old polls. Accepted pushes cannot be recalled if someone answers, leaves or closes the poll immediately afterward.
 
-Accept the existing best-effort delivery limits for this small module; Home is the reliable source of outstanding requests. No new Cron, durable queue, response-per-answer push to the creator, closing summary push, manual “nag everyone,” deadline reminder or periodic reminder in version 1. Those require a later scoped decision on timing, consent, deduplication and suppression.
+Retain existing best-effort limits; Home remains the source of outstanding polls. **No repeated reminders**, closing/result announcements, per-response pushes, manual nagging, new Cron or queue in V1.
 
-## Initial version versus later
+## Deferred
 
-**Initial:** named single-choice polls, explicit active-account audience, creator-only live results, own-answer changes, required deadline/manual close, private history, compact Home/login prompting, and the separately verified optional-push step above.
+Multiple-choice answers (selecting several options), anonymous voting, free-text answers/comments, multi-question surveys, proxy responses, repeated reminders and natural-language deadline interpretation remain deferred. Also defer draft storage, recipient editing, custom deadlines/extensions/reopening, export, moderation/co-creators, retention/deletion UI and external sharing. The agreed Yes / No / Maybe shortcut is included now; broader saved templates are not required.
 
-**Later only if useful:** multiple-choice, free-text/comments, multiple questions, anonymous or participant-visible results, proxy answers for children/nonusers, durable drafts, recipient changes, deadline extension/reopen, duplication/templates, retention/deletion UI, export, co-creators/moderation and scheduled reminders. Do not reserve empty modules or add general permission management for these possibilities.
+## Implementation phases, tests and recovery
 
-## Verification, implementation phases and recovery
+1. **Resolve notification rollout only; preserve agreed core decisions.** No further creation/audience/privacy/deadline choices are needed for the normal flow. Implementation still needs a separate instruction.
+2. **Core household Polls + in-app discovery.** Follow existing private backup/restore verification and migration-ledger reconciliation; add only required Poll tables and ship scoped APIs, compact creation/voting/results/history and bounded Home discovery. Stop with a usable module, even if push waits.
+3. **Optional new-poll push.** Add the household-recipient sender checks, account-wide preference and data-preserving claim migration, independently tested. No unsolicited test pushes or fabricated production votes.
+4. **Acceptance/runbook update.** Verify desktop and 390×844 iPhone layout, plus physical-iPhone delivery/tap if push is enabled. Record release, backups, rollback and limitations; do not begin later survey features.
 
-1. **Agree on product boundaries.** Resolve the decisions below and update this document; no feature rollout yet.
-2. **Core module and in-app discovery.** Back up/restore-verify D1, reconcile its existing migration ledger, add only the Poll tables, and implement gated APIs, mobile page, creator results and Home/nonblocking prompts together. No push sends in this phase. Add targeted tests, full regression checks and desktop/iPhone-sized verification. Deploy as a complete usable stopping point.
-3. **Optional new-poll push.** Add the bounded recipient checks, preference UI and data-preserving claim-category migration; preserve existing push defaults/claims. Verify with synthetic providers before deployment, then two consenting family accounts and a physical iPhone. Do not fabricate or message real recipients during automated verification.
-4. **Acceptance/documentation.** Record results, current limitations, migration/backup/rollback evidence and successor instructions. Stop; later survey features need separate authorization.
+Tests must cover automatic inclusion of creator/all eligible household accounts, exclusion of other households/nonusers/inactive accounts, no-household denial, no Administrator/parent/spouse bypass, submitted recipient/household/deadline spoofing, snapshot/current-membership checks, household moves/retirement and account changes, shared named results, exactly one option, response changes/conflicts, idempotent creation and transaction rollback, foreign options, seven-day/DST boundaries with no question parsing, early-close races, simultaneous polls, bounded Home display/unanswered priority, template usability and safe text rendering. Push tests add creator exclusion, household-scoped opt-outs/eligibility/deduplication and failure isolation. Retain existing account/family-data/Birthday/Chat regressions.
 
-Tests must cover cross-account list/detail/results denial (including guessed IDs and summaries), creator versus recipient rights, no Administrator/parent/spouse bypass, no-household users, disabled/inactive/unprovisioned states, account changes, candidate serialization, duplicate publication, recipient rejection/transaction rollback, response revision races, foreign choices, expiration/DST/close races, immutable published content, safe text rendering, Home dismissal/count behavior, and push author exclusion/opt-out/recipient restriction/duplicate suppression/failure isolation. Retain all current account, family-data and Birthday/Chat regressions.
+Create rollback checkpoints; use matching frontend/backend releases preserving current account/household boundaries. Retain additive Poll data and existing notification claims/subscriptions/VAPID secret; never restore an old database merely to undo UI code. A Poll-trigger rollback must not stop existing Birthday/Chat behavior inadvertently. Update successor/recovery documentation without turning this module into an unrelated infrastructure project.
 
-Create a release checkpoint before changes. Roll back code to a security-preserving account-aware release; keep additive Poll data and existing notification claims, subscriptions and VAPID secret. A trigger rollback must stop Poll sends while preserving Birthday/Chat behavior. Never restore an old database just to undo UI code or weaken the account boundary. Existing private backup/recovery handoff debt remains a prerequisite for safe operations, not permission to broaden this module.
+## Remaining product decision
 
-## Decisions requiring Bob's agreement before implementation
-
-1. **Creation/audience:** may every active account create polls for selected active users, with household/all-user picker shortcuts? Confirm no proxy answers or invitations to Directory-only people initially.
-2. **Disclosure:** accept identifiable answers visible only to the creator, with other participants seeing only their own answer? If shared results or anonymity are essential, decide that before storage/API work.
-3. **Initial scope/lifecycle:** accept single-choice only, immutable published question/options/audience, required deadline (seven-day editable default), early close and no reopen? Multiple-choice can be added to the initial scope if it is already a real need.
-4. **Prompting:** accept a compact Home summary and dismissible, per-tab-session login notice rather than repeated modals or enforced answers?
-5. **Push:** include the separate new-poll announcement step, preserve Polls Off by default, tap Home, and defer reminder/response-result pushes?
-
-These are recommendations, not approved policy. No decision is needed to create new infrastructure: the existing stack is sufficient for this proposed scope.
+**Notification rollout:** should the first Polls release include the one-time new-poll push with an account-wide Polls switch defaulting Off (recommended), or should it ship in-app only and add that narrowly scoped push step later? This is the only outstanding launch choice; it is not a creation setting. Other core choices above reflect Bob's decisions, with conservative membership-edge behavior documented explicitly.
