@@ -15,7 +15,9 @@ Migrations are versioned source; verify actual remote schema/ledger before apply
 | 0010 | Notification delivery claims for birthday/Chat duplicate prevention |
 | 0011 | Household polls, options, recipient snapshots and responses; preserves claims while adding Polls category |
 
-Release 4d3b89c applied 0010 after a private backup/restore verification. Historical production migrations 0004–0007 were applied outside the tracked migration sequence; an absent ledger entry must not be treated as permission to reapply existing schema. Reconcile read-only first, then authorize any ledger repair separately.
+Release 4d3b89c applied 0010 after a private backup/restore verification. Historical production migrations 0004–0007 were applied outside the tracked migration sequence; their schema changes were already present and were never replayed. On October 1, 2026, the remote ledger was reconciled by inserting bookkeeping rows for `0004_chat_requester.sql` through `0007_household_retirement.sql` only. Their migration SQL was not executed. The rows were appended by D1's ledger operation after 0008–0011, so the names are complete but the historical application order remains documented here.
+
+Reconciliation evidence: private export `family-db-before-ledger-reconcile-2026-10-01.sql`, restored with all table fingerprints plus foreign-key/integrity checks; rollback checkpoint `pre-ledger-reconcile-2026-10-01` at application commit `201ea3c`. Post-write verification found the schema and every non-ledger table/data fingerprint unchanged, and `d1_migrations` contains each repository migration 0001–0011 exactly once. Keep this evidence private and outside Git.
 
 ```sh
 npm run db:local          # apply to local development D1

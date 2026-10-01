@@ -71,7 +71,7 @@ The October 1, 2026 checkpoint is recorded in [Technical Health Review](TECHNICA
 These concrete items remain open; general health reviews do not replace or close them. Record evidence when an item is resolved.
 
 - **Operator handoff:** turn private helper locations and tested recovery artifacts into a successor-usable, secret-free runbook; document vault recovery and backup retention/restore ownership. Existing private artifacts alone are not a complete portable recovery process.
-- **Migration history:** reconcile manually applied historical migrations with the remote ledger before any later migration run; never blindly reapply absent ledger entries or change production during a documentation audit.
+- **Migration history:** reconciled October 1, 2026. The remote ledger now records 0001–0011 exactly once; 0004–0007 were recorded as bookkeeping only because their schema was already present. Preserve the private export/evidence and never replay those migrations.
 - **Legacy data exposure review:** README records historical local database copies in Git. Verify repository access/history separately before any sharing or history cleanup; do not rewrite history as routine housekeeping.
 - **Notification operations:** retain documented delivery limits; decide ledger retention only if growth warrants it, preserving duplicate protection. Record real-device category results when available.
 - **Documentation discipline:** keep this roadmap as the status index and feature docs as detailed requirements/operations. Historical release checkpoints are not current rollback instructions. Update status with each scoped release rather than duplicating checklists across docs.

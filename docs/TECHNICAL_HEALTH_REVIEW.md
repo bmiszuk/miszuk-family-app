@@ -46,7 +46,7 @@ The suite covers account gating, identity activation, permissions, household iso
 
 ### Address before Vehicles
 
-1. Reconcile the remote D1 migration ledger and record the result before creating a Vehicles migration. Do not repair history by blindly reapplying migrations.
+1. ~~Reconcile the remote D1 migration ledger~~ **Completed October 1, 2026.** The four historical gaps were recorded as bookkeeping only after backup/restore verification; no schema SQL was replayed. Preserve the private evidence before the next migration.
 2. Make the successor/recovery handbook operational: identify where the tested recovery artifacts live, who owns backup retention and restore access, and how Cloudflare/GitHub/D1 credentials are recovered. Record locations and procedures, never secrets.
 3. Resolve the Vehicles design decisions already called out in `docs/VEHICLES_REQUIREMENTS.md`: ownership and authorization actions, attachment/storage boundaries, maintenance data scope, and the first-phase mobile workflow. Vehicles must not inherit Directory relationships or household Grocery access by accident.
 
