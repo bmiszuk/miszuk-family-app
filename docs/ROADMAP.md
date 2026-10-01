@@ -53,7 +53,15 @@ House Projects, Recipes and Documents remain original unimplemented portal ideas
 - Push retries/durable queue, quiet hours and broader provider support are deferred. Current delivery is best-effort/at-most-once; evaluate improvements if actual delivery or scale warrants them.
 - Soft-delete restore UI, legacy API retirement, further CSS extraction, display-helper splitting and polling consolidation are optional. No broad cleanup/refactor is required now; preserve compatibility until consumers are understood.
 
+## Development checkpoints
+
+Follow the [development and technical-health principles](../ARCHITECTURE.md#development-and-technical-health-principles). GitHub documentation is the durable source of project decisions and status. Design major modules before implementation; keep infrastructure justified by real needs and watch feature sprawl as projects are selected.
+
+After roughly 2–4 meaningful feature projects from the September 30, 2026 whole-project review, perform a focused architecture/technical-health review; repeat that cadence thereafter, or sooner for a concrete risk. Record the review checkpoint and actionable findings here. This is not a scheduled deployment or a standing refactoring project. Maintain successor/recovery instructions as part of each relevant change rather than postponing them until that review.
+
 ## Small worthwhile maintenance / documentation debt
+
+These concrete items remain open; general health reviews do not replace or close them. Record evidence when an item is resolved.
 
 - **Operator handoff:** turn private helper locations and tested recovery artifacts into a successor-usable, secret-free runbook; document vault recovery and backup retention/restore ownership. Existing private artifacts alone are not a complete portable recovery process.
 - **Migration history:** reconcile manually applied historical migrations with the remote ledger before any later migration run; never blindly reapply absent ledger entries or change production during a documentation audit.
