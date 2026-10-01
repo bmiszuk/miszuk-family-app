@@ -121,6 +121,8 @@ See [Home Network](HOME_NETWORK.md).
 
 ## 8. Proxmox
 
+See [Proxmox and Virtual Machines](PROXMOX.md).
+
 **Verified / documented**
 - Proxmox host `proxmox` is `10.112.72.11/24`, running Proxmox VE 9.2.4 on an Intel i5-10500T with approximately 23 GiB usable RAM and a 256-GB-class Samsung NVMe.
 - `vmbr0` bridges the active physical NIC; the default gateway is `10.112.72.1`.
@@ -129,7 +131,8 @@ See [Home Network](HOME_NETWORK.md).
 - No scheduled or existing Proxmox VM backups were found during verification.
 
 **Collect / verify**
-- [ ] Create the dedicated Proxmox/VM documentation with startup, shutdown, update, console, and rebuild procedures.
+- [x] Dedicated Proxmox/VM inventory, storage relationships, startup dependencies, health checks, and recovery notes documented.
+- [ ] Add a fully tested host rebuild procedure after an independent VM backup strategy exists.
 - [ ] Establish a guest backup destination, retention policy, and restore test.
 
 ## 9. VMs and Docker Services
@@ -263,3 +266,4 @@ Handbook milestones:
 - September 30, 2026 — repository state reconciled.
 - September–October 2026 — live home-infrastructure inventory and configuration review performed.
 - October 2026 — first dedicated infrastructure document, [Home Network](HOME_NETWORK.md), added.
+- October 2026 — [Proxmox and Virtual Machines](PROXMOX.md) added.
