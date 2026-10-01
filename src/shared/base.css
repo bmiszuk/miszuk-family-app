@@ -444,8 +444,17 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
 @media(max-width:700px) {
  .hero {min-height:44px;padding-bottom:6px;}
  .hero h1 {font-size:20px;}
- .hero .brand-icon {display:none;}
+ .hero .brand-icon {display:inline-grid;}
  .account-menu>summary {max-width:110px;}
  .dinner-tonight {padding-block:6px;}
  .dinner-summary h2,.dinner-summary strong {font-size:13px;}
+}
+@media(max-width:700px) {
+ .home-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .home-grid > .polls-home, .home-grid > .dinner-tonight {grid-column:span 1;}
+ .home-grid > .summary-card, .home-grid > .calendar-home-card, .home-grid > .family-notices {grid-column:1 / -1;}
+ .polls-home {padding:8px;}
+ .dinner-summary {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 4px;}
+ .dinner-summary h2 {grid-column:1 / -1;}
+ .dinner-summary>a {margin-left:0;min-height:32px;}
 }

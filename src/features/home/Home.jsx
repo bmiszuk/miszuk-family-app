@@ -9,9 +9,8 @@ import Celebrations from '../directory/Celebrations.jsx';
 export default function Home({member,polls}) {
  const directory=useDirectory();
  return <section className="home-view" aria-label="Home">
-  {member.household && <PollHome summary={polls}/>}
   <div className="home-grid">
-   {member.household ? <><GroceryHomeCard member={member}/><Dinner member={member} compact/></> : <NoHousehold/>}
+   {member.household ? <><PollHome summary={polls}/><Dinner member={member} compact/><GroceryHomeCard member={member}/></> : <NoHousehold/>}
    <CalendarHomeCard/>
    <FamilyNotices currentPersonId={member.person?.id} people={directory.data?.people || []}/>
   </div>

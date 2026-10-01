@@ -16,6 +16,7 @@ Updated October 1, 2026 for Family Polls V1, following the September 30 audit of
 
 - **Finish notification acceptance:** Chat between two family members (recipient receives it, author does not, tap opens Chat), a genuine new household Poll (generic push to other opted-in recipients, creator excluded, tap Home), and the first naturally scheduled 8 AM Chicago birthday (one notification per birthday per enrolled device, tap opens Home). Record results without fabricating birthdays or sending unsolicited test messages.
 - **Personal grocery lists:** design individual ownership, optional sharing and navigation alongside existing household lists. No change to household behavior is implied.
+- **Grocery ordering investigation:** investigate transferring unchecked grocery items to ALDI/Instacart, Walmart and Costco using official APIs, deep links or other supported integration mechanisms. Investigation only; no retailer integration is implemented.
 - **Dinner/Calendar notifications:** scope useful events, recipients, timing and category preferences before implementation. Current push infrastructure is reusable; these triggers are not implemented. Calendar is read-only Cozi, so do not assume a local event-write trigger.
 - **Administrator-provisioned external invitations:** build on existing pending accounts; decide delivery/expiry/replay protection and coordinate Cloudflare admission separately. No public signup.
 - **Vehicles first phase:** can be selected for new app development without waiting for Photos; resolve ownership/permissions and attachment storage/limits first. Retain the phased plan below.
@@ -50,6 +51,7 @@ House Projects, Recipes and Documents remain original unimplemented portal ideas
 ## Deferred or optional work
 
 - Polls expansion: multiple-choice, anonymous voting, free text, multi-question surveys, proxy answers, repeated reminders and natural-language deadlines remain deferred. V1 is deliberately one household question with one choice per person.
+- Poll response notifications remain an undecided future possibility; no response notifications are implemented.
 
 - Chat Administrator moderation, cross-household Grocery/Dinner administration, and any delete-any-person override remain unimplemented options, not unfinished requirements for the completed Phase 4 release. Require separate authorization and explicit audited actions.
 - Restricted-purpose accounts, account unlink/relink/delete workflows, additional Photos/Vehicle permissions and invitation delivery require a real scoped need. Additional Administrators are already supported by role administration; do not create one speculatively.

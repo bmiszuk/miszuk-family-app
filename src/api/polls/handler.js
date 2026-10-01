@@ -15,6 +15,7 @@ export async function handlePolls(request,env,member,ctx){
  const scope=`q.household_id=? AND EXISTS(SELECT 1 FROM poll_recipients r WHERE r.poll_id=q.id AND r.user_id=?) AND ${householdActor}`;
  const args=[household,user,user,household];
  const columns=`q.id,q.question,q.created_at,q.expires_at,q.closed_at,q.version,q.creator_user_id=? AS is_creator,
+ (SELECT trim(p.first_name || ' ' || coalesce(p.last_name,'')) FROM app_users cu JOIN people p ON p.id=cu.person_id WHERE cu.id=q.creator_user_id) AS creator_name,
  (${open}) AS active,(SELECT option_id FROM poll_responses WHERE poll_id=q.id AND user_id=?) AS own_option_id,
  (SELECT o.label FROM poll_responses a JOIN poll_options o ON o.poll_id=a.poll_id AND o.id=a.option_id WHERE a.poll_id=q.id AND a.user_id=?) AS own_option_label,
  coalesce((SELECT version FROM poll_responses WHERE poll_id=q.id AND user_id=?),0) AS response_version`;

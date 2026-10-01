@@ -4,7 +4,7 @@ export default function PollCard({poll,detail,onOpen,perform,busy}){
  const [choice,setChoice]=useState(''),[editing,setEditing]=useState(false),[confirmClose,setConfirmClose]=useState(false);
  const item=detail||poll;
  return <article className="poll-card">
-  <header className="poll-card-heading"><h3>{item.question}</h3></header>
+  <header className="poll-card-heading"><div><h3>{item.question}</h3>{item.creator_name&&<p className="poll-creator">Asked by {item.creator_name.split(/\s+/)[0]}</p>}</div></header>
   {!item.active&&<p className="poll-meta">Closed {date(item.closed_at||item.expires_at)}</p>}
   {!detail&&item.active&&item.own_option_id?<p className="poll-meta">Loading results…</p>:!detail?<button className="poll-quiet" onClick={onOpen}>{item.active&&!item.own_option_id?'Answer poll':`${item.own_option_label?`Your answer: ${item.own_option_label} · `:''}View results`} →</button>:<>
    {!!item.active&&(!item.own_option_id||editing)?<form className="poll-answer" onSubmit={e=>{e.preventDefault();perform('response',item.id,{option_id:choice,version:item.response_version},()=>setEditing(false));}}><fieldset><legend className="sr-only">Choose one answer</legend>{item.options.map(o=><label className="poll-choice" key={o.id}><input type="radio" name={'poll-answer-'+item.id} checked={choice===o.id} onChange={()=>setChoice(o.id)} disabled={busy}/>{o.label}</label>)}</fieldset><button disabled={busy||!choice}>Submit answer</button></form>:<p className="poll-own-answer">Your answer: <strong>{item.options.find(o=>o.id===item.own_option_id)?.label||'Not answered'}</strong>{!!item.active&&<button className="poll-quiet" onClick={()=>{setChoice(item.own_option_id);setEditing(true);}}>Change answer</button>}</p>}

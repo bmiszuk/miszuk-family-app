@@ -15,7 +15,7 @@
 .polls-page .poll-filters button{background:transparent;color:var(--muted);border:0;border-bottom:2px solid transparent;border-radius:0;padding:.4rem .2rem;min-height:44px}
 .polls-page .poll-filters button[aria-pressed=true]{color:var(--accent);border-bottom-color:var(--accent)}
 .poll-list{display:grid;gap:.55rem}.poll-card{position:relative;border:1px solid var(--border);border-radius:10px;padding:.65rem .75rem;min-width:0}
-.poll-card-heading{align-items:flex-start}.poll-card h3{font-size:1rem;line-height:1.35;margin:0;overflow-wrap:anywhere}
+.poll-card-heading{align-items:flex-start}.poll-card h3{font-size:1rem;line-height:1.35;margin:0;overflow-wrap:anywhere}.poll-creator{margin:.1rem 0 0;color:var(--muted);font-size:.75rem;font-weight:400}
 .poll-meta{margin:.2rem 0}.poll-own-answer{display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;margin:.25rem 0;font-size:.9rem}
 .polls-page .poll-quiet{background:transparent;border:0;color:var(--accent);padding:.35rem .3rem;min-height:44px;font-size:.85rem;font-weight:500;text-decoration:none}
 .polls-page .poll-quiet:hover:not(:disabled){background:#f0f5f0}
