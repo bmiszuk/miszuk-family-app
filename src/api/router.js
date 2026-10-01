@@ -1,3 +1,4 @@
+import {handlePolls} from './polls/handler.js';
 import {handleAdmin} from './admin/handler.js';
 import {handleNotifications} from './notifications/handler.js';
 import {handleCozi} from './calendar/cozi.js';
@@ -19,6 +20,7 @@ export function createApiRouter() {
     if (url.pathname === '/api/me' && request.method === 'GET') {
       return jsonResponse({member:publicMember(member)});
     }
+    if(url.pathname==='/api/polls'||url.pathname.startsWith('/api/polls/')) return handlePolls(request,env,member,ctx);
     if(url.pathname.startsWith('/api/admin/')) return handleAdmin(request,env,member);
     if(url.pathname.startsWith('/api/notifications/')) return handleNotifications(request,env,member);
     if(url.pathname === '/api/cozi-calendar') return handleCozi(request,env);

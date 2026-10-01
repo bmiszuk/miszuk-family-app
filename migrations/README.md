@@ -13,6 +13,7 @@ Migrations are versioned source; verify actual remote schema/ledger before apply
 | 0008 | Application accounts, trusted identities and security audit |
 | 0009 | Push devices/preferences and identity-replacement subscription invalidation |
 | 0010 | Notification delivery claims for birthday/Chat duplicate prevention |
+| 0011 | Household polls, options, recipient snapshots and responses; preserves claims while adding Polls category |
 
 Release 4d3b89c applied 0010 after a private backup/restore verification. Historical production migrations 0004–0007 were applied outside the tracked migration sequence; an absent ledger entry must not be treated as permission to reapply existing schema. Reconcile read-only first, then authorize any ledger repair separately.
 

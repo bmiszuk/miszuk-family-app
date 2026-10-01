@@ -1,6 +1,6 @@
 # Implementation Roadmap
 
-Audited September 30, 2026 against repository/application release `4d3b89c` and Bob's confirmed status. This is planning guidance, not implementation authorization or a promise of sequence. Documentation commits do not change the production release.
+Updated October 1, 2026 for Family Polls V1, following the September 30 audit of release `4d3b89c`. This is planning guidance, not implementation authorization or a promise of sequence. Documentation commits do not change the production release.
 
 ## Completed
 
@@ -10,11 +10,12 @@ Audited September 30, 2026 against repository/application release `4d3b89c` and 
 - **Push foundation and family enrollment:** voluntary per-device enrollment for eligible active accounts; Bob's physical-iPhone pilot passed, documented at `0ede46c`; family enrollment released at `60907c0`.
 - **Birthday and Family Chat categories:** deployed at `4d3b89c`, with independent account-wide opt-outs, privacy-safe payloads and duplicate prevention. See [notification operations](NOTIFICATIONS.md). Deployment is complete; the two real-device category checks below remain open.
 
+- **Family Polls V1:** household recipient snapshots, single-choice answers, seven-day expiry/early close, named results/history, compact Home discovery and new-poll push with default-On preference. See [requirements and operations](POLLS_REQUIREMENTS.md). Physical-device delivery/tap acceptance remains open.
+
 ## Near-term candidates — no project selected
 
-- **Finish notification acceptance:** Chat between two family members (recipient receives it, author does not, tap opens Chat) and the first naturally scheduled 8 AM Chicago birthday (one notification per birthday per enrolled device, tap opens Home). Record results without fabricating birthdays or sending unsolicited test messages.
+- **Finish notification acceptance:** Chat between two family members (recipient receives it, author does not, tap opens Chat), a genuine new household Poll (generic push to other opted-in recipients, creator excluded, tap Home), and the first naturally scheduled 8 AM Chicago birthday (one notification per birthday per enrolled device, tap opens Home). Record results without fabricating birthdays or sending unsolicited test messages.
 - **Personal grocery lists:** design individual ownership, optional sharing and navigation alongside existing household lists. No change to household behavior is implied.
-- **Family surveys/polls:** [V1 requirements](POLLS_REQUIREMENTS.md) now specify household-wide automatic participation including the creator, one question/single-choice answers, shared named results, simple iPhone creation with a Yes / No / Maybe shortcut, automatic seven-day expiry and bounded Home prompts for multiple active polls. No recipient/deadline/privacy configuration during creation. Only the timing/default of the proposed one-time Polls push rollout remains a launch decision; implementation is not yet authorized. Multiple-choice, anonymous/free-text/multi-question surveys, proxy answers, repeated reminders and natural-language deadlines remain deferred.
 - **Dinner/Calendar notifications:** scope useful events, recipients, timing and category preferences before implementation. Current push infrastructure is reusable; these triggers are not implemented. Calendar is read-only Cozi, so do not assume a local event-write trigger.
 - **Administrator-provisioned external invitations:** build on existing pending accounts; decide delivery/expiry/replay protection and coordinate Cloudflare admission separately. No public signup.
 - **Vehicles first phase:** can be selected for new app development without waiting for Photos; resolve ownership/permissions and attachment storage/limits first. Retain the phased plan below.
@@ -44,9 +45,11 @@ Vehicle permissions must be explicit; neither Directory relationships nor househ
 
 ### Other preserved ideas
 
-House Projects, Recipes and Documents remain original unimplemented portal ideas, without detailed approved scope. Future notification categories may include polls, Dinner, Calendar, anniversaries/family dates and Vehicles, but only Birthdays and Chat currently send. User-selectable preferences accompany any approved expansion; a reserved category key is not an implemented feature.
+House Projects, Recipes and Documents remain original unimplemented portal ideas, without detailed approved scope. Future notification categories may include Dinner, Calendar, anniversaries/family dates and Vehicles; Birthdays, Chat and new Polls currently send. User-selectable preferences accompany any approved expansion; a reserved category key is not an implemented feature.
 
 ## Deferred or optional work
+
+- Polls expansion: multiple-choice, anonymous voting, free text, multi-question surveys, proxy answers, repeated reminders and natural-language deadlines remain deferred. V1 is deliberately one household question with one choice per person.
 
 - Chat Administrator moderation, cross-household Grocery/Dinner administration, and any delete-any-person override remain unimplemented options, not unfinished requirements for the completed Phase 4 release. Require separate authorization and explicit audited actions.
 - Restricted-purpose accounts, account unlink/relink/delete workflows, additional Photos/Vehicle permissions and invitation delivery require a real scoped need. Additional Administrators are already supported by role administration; do not create one speculatively.

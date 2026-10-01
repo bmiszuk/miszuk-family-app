@@ -5,6 +5,11 @@ import {canEditDirectoryPerson} from '../../domain/directoryPermissions.js';
 export function can(user, action, resource = {}, context = {}) {
  if (!user) return false;
  switch (action) {
+  case 'poll.create': return Boolean(user.account?.id && user.household?.id);
+  case 'poll.read':
+  case 'poll.respondOwn':
+  case 'poll.results.read': return Boolean(user.household && resource.household_id===user.household.id && context.recipient);
+  case 'poll.closeOwn': return Boolean(user.household && resource.household_id===user.household.id && resource.creator_user_id===user.account?.id);
   case 'notification.settings.readOwn':
   case 'notification.preferences.readOwn':
   case 'notification.preferences.updateOwn':

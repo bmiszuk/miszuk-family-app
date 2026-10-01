@@ -13,7 +13,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', COZI_CALENDAR_URL:'https://rest.cozi.com/synthetic-private-feed' }, outboundService: async()=>new Response(readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8')), d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql', '0011_household_polls.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
       await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }
@@ -23,6 +23,14 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
       return { status: response.status, data: await response.json() };
     }
     assert.equal((await call('me')).status, 200);
+    const pollRequest={id:crypto.randomUUID(),question:'Runtime poll',options:['Yes','No']};
+    const poll=await call('polls','POST',pollRequest);assert.equal(poll.status,201,JSON.stringify(poll));
+    assert.equal((await call('polls','POST',pollRequest)).status,200);
+    const pollDetail=(await call('polls/'+pollRequest.id)).data.item;
+    assert.equal((await call('polls/'+pollRequest.id+'/response','PUT',{option_id:pollDetail.options[0].id,version:0})).status,200);
+    assert.equal((await call('polls/summary')).data.unanswered_count,0);
+    assert.equal((await call('polls/'+pollRequest.id+'/close','POST',{version:1})).status,200);
+    assert.equal((await call('polls?view=history')).data.items.length,1);
     const cozi=await call('cozi-calendar');
     assert.equal(cozi.status,200,JSON.stringify(cozi.data));
     assert.ok(Array.isArray(cozi.data.items));

@@ -1,3 +1,6 @@
+import Polls from '../features/polls/Polls.jsx';
+import {PollNotice} from '../features/polls/PollHome.jsx';
+import {usePollSummary} from '../features/polls/usePollSummary.js';
 import Dinner from '../features/dinner/Dinner.jsx';
 import Notifications, {SignOut} from '../features/notifications/Notifications.jsx';
 import {registerWorker} from '../features/notifications/browser.js';
@@ -24,6 +27,7 @@ export default function App() {
     document.getElementById('main')?.focus({ preventScroll: true });
   }, [section]);
   const [member, setMember] = useState(null);
+  const polls=usePollSummary(member?.account.id,member?.household?.id);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => { if (member) registerWorker().catch(() => {}); }, [member]);
@@ -43,8 +47,10 @@ export default function App() {
     {member && <nav className="section-nav app-nav" aria-label="Family sections">{sections.map(item => <a key={item.id} href={`#${item.id}`} aria-current={section === item.id ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></a>)}</nav>}
     <main id="main" tabIndex={-1}>
       {!member ? <section className="card sign-in-panel"><h2>Your family space</h2>{error ? <><ErrorMessage error={error} /><SignOut /><button onClick={() => setAttempt(value => value + 1)}>Try again</button></> : <p role="status">Checking your sign-in…</p>}</section> : <>
+        {member.household && <PollNotice key={member.account.id} visible={section!=='home'&&section!=='polls'} summary={polls}/>}
+        {section === 'polls' && (member.household ? <Polls onChange={polls.refresh}/> : <NoHousehold/>)}
         {section === 'notifications' && <Notifications member={member} />}
-        {section === 'home' && <Home member={member} />}
+        {section === 'home' && <Home member={member} polls={polls} />}
         {section === 'dinner' && (member.household ? <Dinner member={member} /> : <NoHousehold />)}
         {section === 'directory' && <Directory currentPersonId={member.person?.id} administrator={member.account?.role === 'administrator'} />}
         <div className="section-view" hidden={section !== 'groceries'}>{member.household ? <GroceryList currentPersonId={member.person?.id} householdName={member.household?.name} /> : <NoHousehold />}</div>

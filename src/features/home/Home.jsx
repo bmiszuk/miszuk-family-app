@@ -1,3 +1,4 @@
+import {PollHome} from '../polls/PollHome.jsx';
 import Dinner from '../dinner/Dinner.jsx';
 import FamilyNotices from '../chat/PinnedChatCard.jsx';
 import GroceryHomeCard from '../groceries/GroceryHomeCard.jsx';
@@ -5,9 +6,10 @@ import CalendarHomeCard from '../calendar/CalendarHomeCard.jsx';
 import {ErrorMessage,NoHousehold} from '../../shared/ui/Shared.jsx';
 import {useDirectory} from '../directory/useDirectory.js';
 import Celebrations from '../directory/Celebrations.jsx';
-export default function Home({member}) {
+export default function Home({member,polls}) {
  const directory=useDirectory();
  return <section className="home-view" aria-label="Home">
+  {member.household && <PollHome summary={polls}/>}
   <div className="home-grid">
    {member.household ? <><GroceryHomeCard member={member}/><Dinner member={member} compact/></> : <NoHousehold/>}
    <CalendarHomeCard/>

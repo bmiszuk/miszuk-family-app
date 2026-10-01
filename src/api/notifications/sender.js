@@ -1,9 +1,10 @@
+import {pollSendEligible} from '../polls/policy.js';
 import {deliverPush} from './transport.js';
 import {requireRollout,eligibleAccount,eligibilityArgs,validateEndpoint} from './policy.js';
 import {HttpError} from '../shared/errors.js';
 import {preferenceCondition} from './preferences.js';
-// Shared transport/lifecycle path for tests and the two internal category triggers.
-export async function sendDevice(env,row,payload,category=null) {
+// Shared transport/lifecycle path for tests and internal category triggers.
+export async function sendDevice(env,row,payload,category=null,pollId=null) {
  const db=env.DB,userId=row.user_id,id=row.id;
  requireRollout(env,userId,true);
  if(row.vapid_key_id!==env.VAPID_KEY_ID)return {result:'configuration'};
@@ -12,8 +13,8 @@ export async function sendDevice(env,row,payload,category=null) {
   requireRollout(env,userId,true);
   const pref=category?` AND ${preferenceCondition(category)}`:'';
   const current=await db.prepare(`SELECT id FROM push_subscriptions WHERE id=? AND user_id=? AND enabled=1 AND version=?
-   AND (expiration_time IS NULL OR expiration_time>?) AND ${eligibleAccount}${pref}`)
-   .bind(id,userId,row.version,Date.now(),...eligibilityArgs(env,userId),...(category?[userId]:[])).first();
+   AND (expiration_time IS NULL OR expiration_time>?) AND ${eligibleAccount}${pref}${pollId?` AND ${pollSendEligible}`:''}`)
+   .bind(id,userId,row.version,Date.now(),...eligibilityArgs(env,userId),...(category?[userId]:[]),...(pollId?[pollId,userId]:[])).first();
   if(!current)throw new Error('Notification no longer eligible');
   return fetch(url,options);
  };

@@ -6,12 +6,12 @@ import {sendTest} from '../src/api/notifications/sender.js';
 import {validateEndpoint,subscriptionInput} from '../src/api/notifications/policy.js';
 const base='/api/notifications/';
 async function setup(t){const f=fixture(t),keys=await syntheticPush();const env={DB:f.DB,ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com',NOTIFICATIONS_ALLOWED_USER_IDS:'local-account',NOTIFICATIONS_ENROLLMENT_ENABLED:'true',NOTIFICATIONS_SENDING_ENABLED:'true',VAPID_PUBLIC_KEY:keys.vapid.publicKey,VAPID_PRIVATE_KEY:keys.vapid.privateKey,VAPID_KEY_ID:'synthetic',VAPID_SUBJECT:'mailto:bob@miszuk.com'};return {...f,keys,env,call:(p,m='GET',b)=>f.request(base+p,m,b,{env})};}
-test('notification rollout defaults closed; own status is sanitized; only the two live categories default on',async t=>{
+test('notification rollout defaults closed; own status is sanitized; only the three live categories default on',async t=>{
  const {request,db}=fixture(t);
  assert.deepEqual((await request(base+'config')).data,{enrollment_allowed:false,sending_allowed:false,public_key:null,key_id:null});
  for(const route of ['subscriptions','test'])assert.equal((await request(base+route,'POST',{})).status,403);
  assert.deepEqual((await request(base+'subscriptions')).data,{items:[]});
- assert.deepEqual((await request(base+'preferences')).data.categories,{birthdays:true,chat:true,polls:false,dinner:false,calendar:false,family_dates:false,vehicles:false});
+ assert.deepEqual((await request(base+'preferences')).data.categories,{birthdays:true,chat:true,polls:true,dinner:false,calendar:false,family_dates:false,vehicles:false});
  assert.equal(db.prepare('SELECT count(*) n FROM notification_preferences').get().n,0);
 });
 test('Member and Administrator own-device registration is idempotent, bounded, and never transferable',async t=>{

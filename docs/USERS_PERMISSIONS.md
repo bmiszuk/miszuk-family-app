@@ -89,7 +89,7 @@ Implemented read-only routes: `GET /api/admin/accounts` (optional `person_id` fi
 
 Implemented mutation routes use the explicit actions in the Step 3/4 sections below, not a generic `account.manage` grant. No current API may provision accounts through a Directory email write.
 
-Notification routes: `GET /api/notifications/config`, `GET/POST /api/notifications/subscriptions`, `DELETE /api/notifications/subscriptions/:id`, `GET/PATCH /api/notifications/preferences`, and `POST /api/notifications/test`. They use `notification.settings.readOwn`, `notification.subscription.manageOwn`, `notification.preferences.readOwn/updateOwn`, and `notification.test.sendOwn`; Members and Administrators have identical own-account/device rights. Rollout and send-time account checks apply in addition to the central gate. Birthday/Chat dispatch is internal, not an Administrator send API; see [Notifications](NOTIFICATIONS.md).
+Notification routes: `GET /api/notifications/config`, `GET/POST /api/notifications/subscriptions`, `DELETE /api/notifications/subscriptions/:id`, `GET/PATCH /api/notifications/preferences`, and `POST /api/notifications/test`. They use `notification.settings.readOwn`, `notification.subscription.manageOwn`, `notification.preferences.readOwn/updateOwn`, and `notification.test.sendOwn`; Members and Administrators have identical own-account/device rights. Rollout and send-time account checks apply in addition to the central gate. Birthday/Chat/Poll dispatch is internal, not an Administrator send API; see [Notifications](NOTIFICATIONS.md).
 
 ## Implemented Phase 4 Step 3 account operations
 
@@ -121,7 +121,7 @@ Later, an Administrator may provision a pending account and send an invitation. 
 
 Photos will need an explicit account capability such as `photos.access`, independent of Administrator role, Directory relationships, and household membership. Portal visibility does not replace separate Photos-host/Immich enforcement. Define coordinated revocation for that service before enabling it; portal disabling alone cannot revoke an independent Immich session. No Photos grant table or integration is required now.
 
-Push preferences and per-device subscriptions now reference stable `app_users.id`. Disabling accounts suppresses future delivery; senders recheck eligibility, and identity replacement invalidates subscriptions. Devices are not identities or grants; Administrator role adds no exception. Birthdays and Chat are deployed; other categories remain deferred. See [notification operations](NOTIFICATIONS.md).
+Push preferences and per-device subscriptions now reference stable `app_users.id`. Disabling accounts suppresses future delivery; senders recheck eligibility, and identity replacement invalidates subscriptions. Devices are not identities or grants; Administrator role adds no exception. Birthdays, Chat and new-Poll announcements are implemented; other categories remain deferred. See [notification operations](NOTIFICATIONS.md).
 
 ## Historical staged cutover and continuing rollback rules
 
@@ -145,3 +145,17 @@ Before cutover, rollback may leave unused additive tables in place. After cutove
 - Both operations recheck actor authority and verified binding, target revision and invariants inside one D1 batch. Revision-guarded before/after metadata is written to the audit at the end of that transaction; any guard, uniqueness, mutation or audit failure rolls it all back. No preflight check is authoritative. Role and identity changes increment `app_users.version`.
 - Every successful first-use binding now checks the observed account revision and increments it exactly once, including active/unbound roster entries. Concurrent replacement, binding, disable or role changes cannot overwrite a newer revision. Repeated bound requests do not increment it.
 - Administrator audit display allowlists role before/after or approved old/new email plus target display name. It never serializes raw metadata, security identity identifiers or credentials. Self-demotion refreshes the frontend identity immediately. Account deletion/relinking, invitations, moderation and unrelated feature permissions remain deferred.
+
+## Household Polls V1 actions
+
+All Poll routes remain behind the authoritative account gate. No Administrator, parent or spouse override applies. SQL rechecks active person/account/current household and creation-time recipient membership, including counts/history/results. No-household accounts receive HOUSEHOLD_REQUIRED.
+
+| Endpoint | Action and scope |
+|---|---|
+| GET /api/polls, /api/polls/summary, /api/polls/:id | poll.read; own current household recipient snapshot; bounded lists/counts |
+| POST /api/polls | poll.create; current household; server-derived active account audience including creator |
+| GET /api/polls/:id/results | poll.results.read; same recipient boundary; named household results |
+| PUT /api/polls/:id/response | poll.respondOwn; own response only, open/unexpired poll, same-poll option and response revision |
+| POST /api/polls/:id/close | poll.closeOwn; current household creator, open poll and poll revision |
+
+Question/choices cannot be changed after publication; no delete/reopen/impersonation endpoint exists. Notification preferences remain own-account; Poll sends additionally enforce household audience and exclude creator. See [Polls](POLLS_REQUIREMENTS.md).
