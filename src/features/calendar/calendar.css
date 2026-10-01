@@ -19,3 +19,5 @@
 .agenda-description > strong {font-size:14px;font-weight:500;line-height:1.4;}
 .home-calendar-list strong {font-size:13px;font-weight:500;}
 .home-calendar-list li {line-height:1.35;}
+
+.agenda-toolbar a {text-decoration:none;display:inline-flex;align-items:center;min-height:44px;}

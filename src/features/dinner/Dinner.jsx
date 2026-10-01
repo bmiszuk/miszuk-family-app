@@ -18,10 +18,10 @@ export default function Dinner({member,compact=false}) {
   const save=(day,personId)=>action.run(()=>api(`dinner/${day}`,{method:'PUT',body:{person_id:personId||null,version:row(day)?.version||0}}),'Dinner saved.');
   const label=day=>names.get(row(day)?.person_id)||'Open';
   return <section className={compact?'card dinner-tonight':'card dinner-week'} aria-label={compact?'Dinner tonight':'Dinner signup'}>
-    <div className="dinner-heading"><h2>{householdTitle(member.household?.name,compact?'Dinner Tonight':'Dinner')}</h2></div>
+    {!compact&&<div className="dinner-heading"><h2>{householdTitle(member.household?.name,'Dinner')}</h2></div>}
     <ErrorMessage error={action.error||collection.error||directory.error} />
-    {compact?<div className="dinner-summary"><strong>{collection.items===null?'Loading…':label(today)}</strong>
-      {collection.items!==null&&!row(today)?.person_id&&canAssign&&<button className="text-button" disabled={action.busy} onClick={()=>save(today,member.person.id)}>Claim tonight</button>}
+    {compact?<div className="dinner-summary"><h2>Dinner Tonight <span aria-hidden="true">—</span></h2>
+      {collection.items!==null&&!row(today)?.person_id&&canAssign?<button className="text-button" disabled={action.busy} onClick={()=>save(today,member.person.id)}>Claim</button>:<strong>{collection.items===null?'Loading…':label(today).split(/\s+/)[0]}</strong>}
       <a href="#dinner">This week →</a></div>:<>
       <div className="week-switch"><button className={!next?'':'quiet'} onClick={()=>setNext(false)}>This week</button><button className={next?'':'quiet'} onClick={()=>setNext(true)}>Next week</button></div>
       <div className="dinner-days">{weekDays(start).map(day=><label className="dinner-day" key={day}><span>{new Date(day+'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'})}{day===today?' · Today':''}</span>
@@ -30,6 +30,6 @@ export default function Dinner({member,compact=false}) {
           {householdPeople.map(p=><option key={p.id} value={p.id}>{names.get(p.id)}</option>)}
         </select></label>)}</div></>}
     {!canAssign&&<p className="muted household-help">Assign your Directory person to a household to sign up for dinner.</p>}
-    <p className="save-status" role="status">{action.notice}</p>
+    {action.notice&&<p className="save-status" role="status">{action.notice}</p>}
   </section>;
 }

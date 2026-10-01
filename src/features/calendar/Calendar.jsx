@@ -6,7 +6,7 @@ export default function Calendar() {
  const groups=coziAgenda(collection.items||[]);
  return <section className="card" id="calendar" aria-label="Calendar">
   <SectionHeader icon="calendar" title="Calendar"/>
-  <div className="agenda-toolbar"><span className="muted">Family calendar · Times in Chicago</span><a href={COZI_WEB_URL} target="_blank" rel="noopener noreferrer">Open Cozi ↗</a></div>
+  <div className="agenda-toolbar"><a href={COZI_WEB_URL} target="_blank" rel="noopener noreferrer">Open Cozi →</a></div>
   <ErrorMessage error={collection.error}/>
   {!collection.error&&collection.items===null&&<p role="status">Loading calendar…</p>}
   {!collection.error&&collection.items!==null&&!groups.length&&<p className="muted">No upcoming events in the next 90 days.</p>}

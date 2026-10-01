@@ -424,3 +424,28 @@ footer { padding: 12px 0; margin-top: 12px; font-size: 11px; }
  .chat-compose-actions > label:first-child {flex:1 1 auto;min-width:150px;min-height:44px;gap:6px;}
  .chat-compose-actions > button {flex:none;width:auto;height:44px;min-height:44px;padding:6px 12px;}
 }
+
+/* Compact account menu and entry controls; existing list rows/navigation are unchanged. */
+.account-menu {position:relative;margin-left:auto;flex:none;font-size:13px;}
+.account-menu>summary {display:flex;align-items:center;gap:5px;min-height:44px;max-width:130px;cursor:pointer;list-style:none;overflow-wrap:anywhere;}
+.account-menu>summary::-webkit-details-marker {display:none;}
+.account-menu-items {position:absolute;right:0;top:100%;z-index:10;min-width:170px;max-width:260px;padding:6px;background:white;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 16px #26373220;}
+.account-menu-items a,.account-menu-items button {display:flex;align-items:center;min-height:44px;width:100%;padding:8px 10px;text-decoration:none;text-align:left;font-size:13px;}
+.account-menu-items .notification-signout {display:block;}
+#groceries .grocery-form {grid-template-columns:minmax(0,1fr) minmax(85px,.5fr) 44px;gap:4px 6px;}
+#groceries .grocery-form>label {grid-column:auto;gap:2px;font-size:12px;}
+#groceries .grocery-form input {height:44px;min-height:44px;padding:6px 8px;}
+#groceries .grocery-form>.grocery-submit {width:44px;height:44px;min-height:44px;padding:0;font-size:22px;}
+#groceries .grocery-form>.quiet {grid-column:1 / -1;}
+.home-grid>.dinner-tonight {align-self:start;}
+.dinner-summary {gap:5px;flex-wrap:wrap;}
+.dinner-summary h2,.dinner-summary strong {font-size:14px;margin:0;font-weight:600;}
+.dinner-summary>a {text-decoration:none;white-space:nowrap;}
+@media(max-width:700px) {
+ .hero {min-height:44px;padding-bottom:6px;}
+ .hero h1 {font-size:20px;}
+ .hero .brand-icon {display:none;}
+ .account-menu>summary {max-width:110px;}
+ .dinner-tonight {padding-block:6px;}
+ .dinner-summary h2,.dinner-summary strong {font-size:13px;}
+}

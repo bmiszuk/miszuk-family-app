@@ -15,7 +15,7 @@
 .polls-page .poll-filters button{background:transparent;color:var(--muted);border:0;border-bottom:2px solid transparent;border-radius:0;padding:.4rem .2rem;min-height:44px}
 .polls-page .poll-filters button[aria-pressed=true]{color:var(--accent);border-bottom-color:var(--accent)}
 .poll-list{display:grid;gap:.55rem}.poll-card{position:relative;border:1px solid var(--border);border-radius:10px;padding:.65rem .75rem;min-width:0}
-.poll-card-heading{align-items:flex-start;padding-right:32px}.poll-card h3{font-size:1rem;line-height:1.35;margin:0;overflow-wrap:anywhere}
+.poll-card-heading{align-items:flex-start}.poll-card h3{font-size:1rem;line-height:1.35;margin:0;overflow-wrap:anywhere}
 .poll-meta{margin:.2rem 0}.poll-own-answer{display:flex;align-items:center;flex-wrap:wrap;gap:.3rem;margin:.25rem 0;font-size:.9rem}
 .polls-page .poll-quiet{background:transparent;border:0;color:var(--accent);padding:.35rem .3rem;min-height:44px;font-size:.85rem;font-weight:500;text-decoration:none}
 .polls-page .poll-quiet:hover:not(:disabled){background:#f0f5f0}
@@ -24,7 +24,9 @@
 .poll-counts{display:flex;gap:.35rem .8rem;flex-wrap:wrap;margin:.35rem 0;font-size:.9rem}.poll-counts span{overflow-wrap:anywhere;max-width:100%}.poll-counts strong{margin-left:.25rem}
 .poll-breakdown summary{color:var(--muted);font-size:.85rem;min-height:44px;display:flex;align-items:center;cursor:pointer}.poll-breakdown summary::before{content:'▸';margin-right:.35rem}.poll-breakdown[open] summary::before{content:'▾'}
 .poll-breakdown ul{list-style:none;margin:0;padding:0}.poll-breakdown li{display:flex;justify-content:space-between;gap:.75rem;padding:.25rem 0;font-size:.85rem;overflow-wrap:anywhere}.poll-breakdown li strong{text-align:right;font-weight:500}
-.poll-overflow{position:absolute;top:0;right:.2rem}.poll-overflow>summary{list-style:none;cursor:pointer;min-width:44px;min-height:44px;display:grid;place-items:center;color:var(--muted);font-size:1.25rem}.poll-overflow>summary::-webkit-details-marker{display:none}
-.poll-overflow[open]>div,.poll-overflow[open]>button{position:absolute;right:0;top:40px;z-index:2;width:220px;background:white;border:1px solid var(--border);border-radius:8px;padding:.6rem;box-shadow:0 3px 12px #26373218}.poll-overflow p{font-size:.85rem;margin:0 0 .4rem}
 .polls-page fieldset{margin:0}.polls-page button{min-height:44px}.polls-page .actions{margin:.5rem 0}
 @media(max-width:600px){.polls-page{padding:.75rem}.poll-home-heading{align-items:flex-start}.poll-home-heading strong{font-size:.95rem}.poll-home-heading .poll-link{font-size:.8rem}.poll-page-heading h2{font-size:1.1rem}}
+
+.poll-page-heading>button{padding:6px 12px;font-size:.85rem;min-height:44px}
+.poll-close p{margin:.2rem 0;font-size:.85rem;color:var(--muted)}
+.polls-page .poll-close>.poll-quiet{color:var(--muted)}

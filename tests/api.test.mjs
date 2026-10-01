@@ -159,17 +159,40 @@ test('unknown endpoints and methods return predictable status codes', async t =>
   assert.equal((await request('/api/news', 'PUT', {})).status, 405);
 });
 
-test('requester references support add/edit/null and preserve legacy client updates', async t => {
+test('groceries derive requester from the account and reject changing or clearing it', async t => {
   const {request,db}=fixture(t);
-  const person=(await request('/api/directory/people','POST',{first_name:'Requester',birth_date:null})).data.item;
-  const item=(await request('/api/groceries','POST',{name:'Milk',requester_person_id:person.id})).data.item;
-  assert.equal(item.requester_person_id,person.id);
-  const changed=await request(`/api/groceries/${item.id}`,'PATCH',{name:'Milk',quantity:'2 gallons',done:true,version:1});
-  assert.equal(changed.data.item.requester_person_id,person.id);
-  const cleared=await request(`/api/groceries/${item.id}`,'PATCH',{version:2,requester_person_id:null});
-  assert.equal(cleared.data.item.requester_person_id,null);
-  assert.equal((await request('/api/groceries','POST',{name:'Other'})).data.item.requester_person_id,null);
-  assert.equal((await request('/api/groceries','POST',{name:'Bad',requester_person_id:crypto.randomUUID()})).status,400);
+  const item=(await request('/api/groceries','POST',{name:'Milk'})).data.item;
+  assert.equal(item.requester_person_id,localPerson);
+  for(const requester_person_id of [null,crypto.randomUUID()]){
+    assert.equal((await request('/api/groceries','POST',{name:'Spoofed',requester_person_id})).status,403);
+    assert.equal((await request('/api/groceries/'+item.id,'PATCH',{version:1,requester_person_id})).status,403);
+  }
+  const changed=await request('/api/groceries/'+item.id,'PATCH',{quantity:'2 gallons',version:1});
+  assert.equal(changed.data.item.requester_person_id,localPerson);
+  const checked=await request('/api/groceries/'+item.id,'PATCH',{...changed.data.item,done:true});
+  assert.equal(checked.status,200);assert.equal(checked.data.item.requester_person_id,localPerson);
+  assert.equal(db.prepare('SELECT count(*) n FROM grocery_items').get().n,1);
+  assert.equal((await request('/api/groceries/import','POST',{items:[{legacy_id:'import',name:'Bread'}]})).status,200);
+  assert.equal(db.prepare("SELECT requester_person_id FROM grocery_items WHERE name='Bread'").get().requester_person_id,localPerson);
+  assert.equal((await request('/api/groceries/import','POST',{items:[{legacy_id:'spoof',name:'Bad',requester_person_id:null}]})).status,403);
+});
+
+test('grocery names resolve only inside the list household and preserve historical requester links',async t=>{
+ const {request,db}=fixture(t);
+ const person=(await request('/api/directory/people','POST',{first_name:'Other household person'})).data.item;
+ const item=(await request('/api/groceries','POST',{name:'Legacy'})).data.item;
+ assert.equal((await request('/api/groceries')).data.items[0].requester_name,'Local');
+ db.prepare('UPDATE grocery_items SET requester_person_id=? WHERE id=?').run(person.id,item.id);
+ const rows=(await request('/api/groceries')).data.items;
+ assert.equal(rows[0].requester_name,null);
+ assert.equal(rows[0].requester_person_id,person.id);
+ assert.doesNotMatch(JSON.stringify(rows),/Other household person|login_email|import_key|deleted_at/);
+ assert.equal((await request('/api/groceries/'+item.id,'PATCH',{version:1,name:'Legacy edited'})).status,200);
+ assert.equal(db.prepare('SELECT requester_person_id FROM grocery_items WHERE id=?').get(item.id).requester_person_id,person.id);
+ db.prepare('UPDATE people SET household_id=? WHERE id=?').run(defaultHousehold,person.id);
+ assert.equal((await request('/api/groceries')).data.items[0].requester_name,'Other household person');
+ db.prepare('UPDATE people SET deleted_at=CURRENT_TIMESTAMP WHERE id=?').run(person.id);
+ assert.equal((await request('/api/groceries')).data.items[0].requester_name,null);
 });
 
 test('chat sender and Home notice update the same preserved news record', async t => {
