@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {build} from 'vite';
+import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {pathToFileURL} from 'node:url';
+const dir=await mkdtemp(join(tmpdir(),'polls-ui-'));
+const output=await build({configFile:false,logLevel:'silent',plugins:[{name:'ui-test-entry',resolveId:id=>id==='polls-ui-entry'?id:null,load:id=>id==='polls-ui-entry'?`import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';import {PollHome} from '${process.cwd().replaceAll('\\','/')}/src/features/polls/PollHome.jsx';import PollCard from '${process.cwd().replaceAll('\\','/')}/src/features/polls/PollCard.jsx';export const home=props=>renderToStaticMarkup(React.createElement(PollHome,props));export const card=props=>renderToStaticMarkup(React.createElement(PollCard,props));`:null}],build:{write:false,ssr:true,rollupOptions:{input:'polls-ui-entry'},minify:false},ssr:{noExternal:true}});
+const file=join(dir,'render.mjs');await writeFile(file,output.output.find(o=>o.type==='chunk'&&o.isEntry).code);const {home,card}=await import(pathToFileURL(file));await rm(dir,{recursive:true,force:true});
+const poll={id:'p',question:'Dinner Saturday?',active:1,is_creator:1,expires_at:'2026-10-08T20:00:00Z',version:1,options:[{id:'yes',label:'Yes'},{id:'no',label:'No'}],responses:[{first_name:'Example',last_name:'Member',option_id:'yes',available:1}],own_option_id:'yes',response_version:1};
+test('Home exposes only the prioritized question with one-tap choices and additional poll count',()=>{const html=home({summary:{data:{next:{...poll,own_option_id:null},unanswered_count:3,active_count:4}}});assert.match(html,/Dinner Saturday\?/);assert.equal((html.match(/class="poll-choice-button"/g)||[]).length,2);assert.match(html,/2 more unanswered/);assert.doesNotMatch(html,/Submit answer|type="radio"/);});
+test('caught-up Home stays compact without an answer form',()=>{const html=home({summary:{data:{next:null,unanswered_count:0,active_count:1}}});assert.match(html,/1 active poll · You&#x27;re caught up/);assert.match(html,/View polls/);assert.doesNotMatch(html,/<button|unanswered/);});
+test('expanded poll is one card, compact counts and one named breakdown with secondary creator controls',()=>{const html=card({poll,detail:poll});assert.equal((html.match(/Dinner Saturday\?/g)||[]).length,1);assert.match(html,/Closes Oct 8/);assert.doesNotMatch(html,/Chicago|PM|Names<|household recipients/);assert.equal((html.match(/Who answered/g)||[]).length,1);assert.match(html,/Your answer:/);assert.match(html,/Change answer/);assert.match(html,/aria-label="Poll actions"/);assert.match(html,/Example Member/);});
+test('noncreator closed cards have no edit or close control and escape question markup',()=>{const p={...poll,active:0,is_creator:0,question:'<script>unsafe</script>'};const html=card({poll:p,detail:p});assert.doesNotMatch(html,/Change answer|Poll actions|<script>/);assert.match(html,/&lt;script&gt;/);});
