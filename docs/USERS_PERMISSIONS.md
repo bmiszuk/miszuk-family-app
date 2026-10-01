@@ -2,7 +2,7 @@
 
 Implementation status: Phase 3 account enforcement and Phase 4 Step 1 Directory/Household restrictions and Step 2 Application Access views and Step 3 provisioning/enable/disable and Step 4 role/approved-identity administration are implemented. Step 1 adds explicit Administrator profile/anniversary corrections and transactional security audits; moderation and cross-household overrides remain deferred. Household PATCH/DELETE requires `expected_name` for guarded concurrency. Member person-deletion eligibility is unchanged; no Administrator delete-any override is introduced in Step 1.
 
-Design status: agreed target for staged implementation.  Follow [ARCHITECTURE.md](../ARCHITECTURE.md); no broad refactor or enterprise RBAC framework is required.
+Status as of September 30, 2026: Users & Permissions through Phase 4 is complete. The earlier design also records optional moderation/cross-household ideas; these are deferred, not implemented privileges or an instruction to begin a further phase.  Follow [ARCHITECTURE.md](../ARCHITECTURE.md); no broad refactor or enterprise RBAC framework is required.
 
 ## Authentication, identity, and authorization
 
@@ -12,7 +12,7 @@ Design status: agreed target for staged implementation.  Follow [ARCHITECTURE.md
 
 **Authorization** decides whether an active account may perform an explicit action on a resource. Extend the existing shared `can(currentUser, action, resource)` boundary, with server-loaded relationship/context data as needed. Server/API checks are authoritative; UI visibility only reflects them.
 
-Target request flow:
+Implemented request flow:
 
 `verified Access identity → provisioned account → active-account/person check → explicit feature action → scoped query/write and validation`
 
@@ -20,7 +20,7 @@ Resolve the account context before all API routing, including legacy endpoints a
 
 ## Account data model
 
-These are proposed D1 tables, not migrations. Use database uniqueness, foreign keys, and transactional guards as well as API checks.
+These account tables are implemented by `0008_application_accounts.sql`. Use database uniqueness, foreign keys, and transactional guards as well as API checks.
 
 | Table | Fields and relationships |
 |---|---|
@@ -30,50 +30,50 @@ These are proposed D1 tables, not migrations. Use database uniqueness, foreign k
 
 Directory `people`, `relationships`, and `households` remain family data. Account roles/status and authoritative login identities do not belong in the person editor. Existing `people.login_email` is a reviewed migration input only: do not automatically provision every existing value. After cutover, stop using it for authentication and reject ordinary writes to it; later retirement must not silently repurpose it as a new security field.
 
-Account/person links must not cascade-delete accounts or audit history. Block ordinary deletion of an account-linked person; provide a controlled account disable/unlink workflow with last-administrator safeguards. Person soft deletion must also fail identity resolution. Preserve existing record attribution rather than rewriting historical `created_by` values.
+Account/person links must not cascade-delete accounts or audit history. Block ordinary deletion of an account-linked person; use account disable for revocation. Unlink/relink/deletion administration remains deferred and would require last-administrator safeguards. Person soft deletion must also fail identity resolution. Preserve existing record attribution rather than rewriting historical `created_by` values.
 
-Normalize provisioned emails consistently using trimmed, case-insensitive comparison; do not invent provider-specific alias equivalence. At activation, only an approved pending identity may match the verified Access email. Atomically bind its verified issuer/subject and activate the account. Subsequently resolve the bound identity, not a mutable person email. Conflicting or changed identity details require controlled administrator/operator recovery, not silent reassignment. Verify actual Access subject behavior before implementing binding/recovery details.
+Normalize provisioned emails consistently using trimmed, case-insensitive comparison; do not invent provider-specific alias equivalence. At activation, only an approved pending identity may match the verified Access email. Atomically bind its verified issuer/subject and activate the account. Subsequently resolve the bound identity, not a mutable person email. Conflicting or changed identity details require controlled administrator/operator recovery, not silent reassignment. Binding and replacement are implemented; recovery must still verify actual Access identity rather than inventing a subject.
 
 ## Roles and agreed rules
 
 - **Member:** active provisioned account with normal family-wide Directory, Chat, and Calendar access; resource rules still apply.
-- **Administrator:** explicit account, Directory, household, and approved cross-household administration actions. Bob (`bob@miszuk.com`) is the initial and only Administrator.
+- **Administrator:** explicit implemented account, Directory and household administration actions. Cross-household operations remain deferred. Bob (`bob@miszuk.com`) is the initial and only Administrator.
 - Administrator status is not a universal bypass. Every override must be named and implemented deliberately. Unknown actions, integrity checks, optimistic concurrency, and last-administrator protections still apply.
 - Household assignment and household create/rename/retire are Administrator-only.
 - Relationship creation/removal is Administrator-only, including nested relationships in person-save requests. Self/parent/spouse rules remain for ordinary non-security-sensitive profile editing. Anniversary editing may retain the existing relationship-edit eligibility; it must not change relationship endpoints or type.
-- Provisioned users without an assigned household have no household-specific access. Remove the authorization fallback, not existing default-household records or their groceries. An Administrator can explicitly assign people to that household.
-- Chat authors retain ownership. Separate Administrator moderation permits removing/unpinning another author's message, not impersonation or rewriting their message.
+- Provisioned users without an assigned household have no household-specific access. The authorization fallback is removed; existing default-household records and groceries are preserved. An Administrator can explicitly assign people to that household.
+- Chat authors retain ownership. A future separately authorized Administrator moderation capability could remove/unpin another author's message, never impersonate or rewrite it. Current Administrators retain author-only Chat rights.
 - Photos will require explicit access authorization; Administrator status alone does not grant it.
 - Household membership, marriage, and parenthood never automatically grant unrelated feature rights such as Vehicle editing.
 
 ## Endpoint/action policy matrix
 
-This inventories the currently routed API surface from `src/api/router.js` and handlers. Action names below are target policy names, not claims that they are implemented. Unless stated otherwise, every row requires a verified Access identity, active account, and active linked person. Unsupported methods/routes remain rejected.
+This inventories feature routes plus the separate implemented admin and notification routes below. Some table action names are conceptual policy names rather than literal `can()` constants. Administrator columns describe current behavior; future overrides are explicitly marked deferred. Unless stated otherwise, every row requires a verified Access identity, active account, and active linked person. Unsupported methods/routes remain rejected.
 
 `Related editor` means self, direct parent editing child, or spouse in either direction, using current active server-loaded relationships. It does not grant security-field access.
 
 | Existing endpoint and method | Target action | Member rule | Explicit Administrator rule |
 |---|---|---|---|
-| `GET /api/me` | `session.read` | Return own active account/person context and UI permissions. Authenticated pending/disabled/unprovisioned callers may receive only a minimal access-state response, no family data. | Same; disabled Administrators gain no access. |
+| `GET /api/me` | `session.read` | Return own active account/person context and UI permissions. Matching approved first use may activate a pending account; denied callers receive only the access error, never family data. | Same; disabled Administrators gain no access. |
 | `GET /api/directory` | `directory.read` | Family-wide active people/relationships; do not include authoritative account identity records. | Same. |
 | `POST /api/directory/people` | `directory.create` | May create a Directory person only; no account, household assignment, or relationship creation. | May create and separately authorize household/relationship fields. |
 | `PATCH /api/directory/people/:id` | `directory.profile.edit` | Related editor for ordinary profile fields only. | Explicit edit-any-person action. |
 | Same person POST/PATCH, household field changes | `directory.household.assign` | Denied. | Allowed for valid target household or clearing assignment. |
 | Same person POST/PATCH, relationship additions/removals | `directory.relationship.manage` | Denied, including nested payloads. | Allowed subject to relationship integrity. |
 | Same person POST/PATCH, login/account security fields | `account.manage` | Denied. | Use dedicated account operations, not the ordinary person-save endpoint. |
-| `DELETE /api/directory/people/:id` | `directory.delete` | Retain existing related-editor eligibility for unlinked people, subject to deletion protections. | Explicit delete-any-person action with the same integrity/account safeguards. |
+| `DELETE /api/directory/people/:id` | `directory.delete` | Retain existing related-editor eligibility for unlinked people, subject to deletion protections. | Same related-editor rule; no delete-any-person override. Account-linked people remain protected. |
 | `POST /api/directory/relationships`; `DELETE /api/directory/relationships/:id` | `directory.relationship.manage` | Denied. | Allowed; preserve same-family, no-cycle, uniqueness, and spouse constraints. |
 | `PATCH /api/directory/relationships/:id` | `directory.anniversary.edit` | Existing spouse-anniversary edit rule: related editor of either spouse. No relationship rewiring. | Explicit anniversary correction. |
 | `GET /api/households` | `household.read` | Read active household names; this grants no access to household content. | Same. |
 | `POST /api/households`; `PATCH /api/households/:id`; `DELETE /api/households/:id` | `household.create`, `household.rename`, `household.retire` | Denied. | Allowed; retain occupied/default-household retirement protections. |
-| `GET /api/groceries`; `POST /api/groceries`; `PATCH /api/groceries/:id`; `DELETE /api/groceries/:id` | `grocery.read`, `grocery.create`, `grocery.update`, `grocery.delete` | Assigned household only, enforced in queries and writes. | Own-household behavior normally; explicit scoped cross-household operation when administering. |
-| `POST /api/groceries/import`; `DELETE /api/groceries/checked` | `grocery.import`, `grocery.clearChecked` | Assigned household only, including bulk operations. | Explicit scoped cross-household operation. |
-| `GET /api/dinner` | `dinner.read` | Assigned household only. | Explicit scoped cross-household read when administering. |
-| `PUT /api/dinner/:day` | `dinner.assign` | Assigned household only; assignee must belong to it, or clear the day. | Explicit target-household administration; assignee must still belong to that household. |
+| `GET /api/groceries`; `POST /api/groceries`; `PATCH /api/groceries/:id`; `DELETE /api/groceries/:id` | `grocery.read`, `grocery.create`, `grocery.update`, `grocery.delete` | Assigned household only, enforced in queries and writes. | Assigned household only; cross-household override deferred. |
+| `POST /api/groceries/import`; `DELETE /api/groceries/checked` | `grocery.import`, `grocery.clearChecked` | Assigned household only, including bulk operations. | Assigned household only; cross-household override deferred. |
+| `GET /api/dinner` | `dinner.read` | Assigned household only. | Assigned household only; cross-household override deferred. |
+| `PUT /api/dinner/:day` | `dinner.assign` | Assigned household only; assignee must belong to it, or clear the day. | Assigned household only; assignee must belong to it. Cross-household override deferred. |
 | `GET /api/news` | `chat.read` | Family-wide reading. This is the current Chat route. | Same. |
 | `POST /api/news` | `chat.post` | Sender forced to current account's person. | Same; no impersonation. |
-| `PATCH /api/news/:id` | `chat.editOwn`, `chat.pinOwn` | Author only; includes own pin/unpin behavior. | Author rules for own posts; for others, only the separate unpin action below. |
-| `DELETE /api/news/:id`; restricted `PATCH /api/news/:id` | `chat.removeOwn`, `chat.moderate.remove`, `chat.moderate.unpin` | Delete own message; no moderation of others. | Remove or unpin others explicitly. Unpin accepts only the unpin change, preserves sender/body and does not delete the message. |
+| `PATCH /api/news/:id` | `chat.editOwn`, `chat.pinOwn` | Author only; includes own pin/unpin behavior. | Author-only; moderation of others deferred. |
+| `DELETE /api/news/:id`; restricted `PATCH /api/news/:id` | `chat.removeOwn`, `chat.moderate.remove`, `chat.moderate.unpin` | Delete own message; no moderation of others. | Author-only today. Future moderation may remove/unpin others without rewriting or impersonating; not implemented. |
 | `GET /api/cozi-calendar` | `calendar.read` | Family-wide read; cached results still require the account gate. | Same; no Cozi write override. |
 | `GET /api/events`; `POST /api/events`; `PATCH /api/events/:id`; `DELETE /api/events/:id` | `calendar.local.read/create/update/delete` | Retain existing family-wide local-calendar behavior for active accounts. | Same explicit actions. This retained API uses `household_events`, not the current Cozi UI. |
 | `GET /api/people`; `POST /api/people` | `directory.legacy.read/create` | Retain read/create compatibility behind account gate; no security-field or relationship writes. | Same; must not bypass Directory/account safeguards. |
@@ -83,11 +83,13 @@ Directory person creation/deletion and legacy/local-calendar behavior above reta
 
 Field-level checks apply to changes, not merely to which endpoint was called. Inspect nested person saves so ordinary profile edits cannot smuggle a household or relationship change. Reject unauthorized changes atomically; unchanged submitted values do not confer authority. UI must remove unavailable controls and obtain updated capabilities; API authorization remains mandatory.
 
-Cross-household administration must explicitly identify and authorize one target household. Define separate known override actions for the grocery/dinner operations above, audit writes, and preserve SQL scope for item lookups, imports, and bulk deletion. Never implement `administrator → unrestricted SQL`. The exact transport/UI for selecting the target is implementation detail, not a new existing endpoint.
+If separately implemented, cross-household administration must explicitly identify and authorize one target household. Define separate known override actions for the grocery/dinner operations above, audit writes, and preserve SQL scope for item lookups, imports, and bulk deletion. Never implement `administrator → unrestricted SQL`. The exact transport/UI for selecting the target is implementation detail, not a new existing endpoint.
 
 Implemented read-only routes: `GET /api/admin/accounts` (optional `person_id` filter), `GET /api/admin/accounts/:id`, and `GET /api/admin/security-audit`. Account reads require `account.read`; audit reads require `securityAudit.read`, both Administrator-only. Lists accept `limit` (default 20, maximum 50) and `offset` (0–100000), returning `next_offset`. Audit pages sort newest-first by timestamp/ID; concurrent new events may shift offset pages, so this is a recent-changes view, not an audit export. Only display fields are serialized; raw audit details/labels and security identity identifiers are excluded. Reads do not create audit events. Step 2 introduced no mutations.
 
-Future dedicated account administration routes will require `account.manage`; audit inspection requires `securityAudit.read`, both Administrator-only. Define their exact methods/paths during implementation; do not imply that these APIs already exist. No current API may provision accounts through a Directory email write.
+Implemented mutation routes use the explicit actions in the Step 3/4 sections below, not a generic `account.manage` grant. No current API may provision accounts through a Directory email write.
+
+Notification routes: `GET /api/notifications/config`, `GET/POST /api/notifications/subscriptions`, `DELETE /api/notifications/subscriptions/:id`, `GET/PATCH /api/notifications/preferences`, and `POST /api/notifications/test`. They use `notification.settings.readOwn`, `notification.subscription.manageOwn`, `notification.preferences.readOwn/updateOwn`, and `notification.test.sendOwn`; Members and Administrators have identical own-account/device rights. Rollout and send-time account checks apply in addition to the central gate. Birthday/Chat dispatch is internal, not an Administrator send API; see [Notifications](NOTIFICATIONS.md).
 
 ## Implemented Phase 4 Step 3 account operations
 
@@ -103,7 +105,7 @@ Future dedicated account administration routes will require `account.manage`; au
 - **Active:** bound identity and active person permit the account gate; feature rules then apply. No assigned household means no ordinary household access.
 - **Disabled:** deny application data and mutations even with a valid Access session. Preserve person, relationships, content, identity binding, and audit history. Administrator-controlled reactivation restores access after review; login alone cannot reactivate it.
 
-Before enforcement, confirm Bob's existing Directory ID and verified Access identity for `bob@miszuk.com`. Create and bind the initial Administrator using a controlled operator/bootstrap operation, not first-login-wins or a hard-coded permanent email bypass. Review other initial accounts individually. Test Bob's administrative access in a separate session before cutover.
+Historical bootstrap (completed): before enforcement, confirm Bob's existing Directory ID and verified Access identity for `bob@miszuk.com`. Create and bind the initial Administrator using a controlled operator/bootstrap operation, not first-login-wins or a hard-coded permanent email bypass. Review other initial accounts individually. Test Bob's administrative access in a separate session before cutover.
 
 Prevent disabling, demoting, unlinking, deleting the linked person, or removing the usable identity of the last active Administrator. Protect the invariant transactionally, including concurrent requests; a UI warning or count-before-write alone is insufficient. Role and identity changes must not indirectly strand the sole Administrator.
 
@@ -111,7 +113,7 @@ There will initially be one application Administrator. Independent recovery is t
 
 Disabling takes effect for subsequent API requests; it cannot retract data already downloaded or automatically terminate sessions in independent services.
 
-## Future invitations, Photos, and notifications
+## Future invitations and Photos; implemented notification boundary
 
 External ordinary family members may receive the same family-wide Directory/Chat/Calendar access, with household features determined by assignment. Email domain does not choose role or automatically provision access. Restricted-purpose accounts are deferred.
 
@@ -119,18 +121,20 @@ Later, an Administrator may provision a pending account and send an invitation. 
 
 Photos will need an explicit account capability such as `photos.access`, independent of Administrator role, Directory relationships, and household membership. Portal visibility does not replace separate Photos-host/Immich enforcement. Define coordinated revocation for that service before enabling it; portal disabling alone cannot revoke an independent Immich session. No Photos grant table or integration is required now.
 
-Future push preferences and per-device subscriptions should reference stable `app_users.id`, supporting multiple devices and individual preferences. Account disabling must suppress future delivery; workers sending notifications must recheck eligibility. Device subscriptions are not identities or permission grants. Do not create push tables or implement notifications now.
+Push preferences and per-device subscriptions now reference stable `app_users.id`. Disabling accounts suppresses future delivery; senders recheck eligibility, and identity replacement invalidates subscriptions. Devices are not identities or grants; Administrator role adds no exception. Birthdays and Chat are deployed; other categories remain deferred. See [notification operations](NOTIFICATIONS.md).
 
-## Staged cutover and rollback
+## Historical staged cutover and continuing rollback rules
+
+The account schema, reviewed provisioning/comparison, Phase 3 enforcement and Phase 4 administration stages are complete. The sequence below preserves design history; it must not be rerun. Feature moderation/overrides and invitations remain deferred; push was delivered separately. Phase 3 enforced accounts first, then Phase 4 Step 1 tightened household/relationship controls.
 
 1. **Finalize implementation contracts.** Use the matrix above to define explicit actions, field checks, account response shape, and identity-binding recovery. Confirm Bob and the reviewed initial account roster. No enforcement change yet.
 2. **Add account tables.** Back up production D1 before a separately authorized additive migration. Keep Directory and application data intact; old code remains compatible with unused tables.
 3. **Provision and compare.** Seed only reviewed accounts and Bob's bound Administrator identity. Run the new resolver in comparison mode without granting additional privileges. Verify account/person mappings, unassigned-household handling, and operator recovery. This is a temporary transition, not the target access model.
-4. **Cut over atomically at the application boundary.** Enforce active accounts on every API; stop Directory-email identity resolution and default-household fallback. Introduce agreed security-field/relationship/household restrictions and matching UI together. Preserve existing records and reject unauthorized nested updates. Do not leave a legacy-email fallback available to disabled users.
-5. **Expose controlled administration.** Add the small account management UI and explicit feature administration/moderation operations, with audit and last-Administrator safeguards. Until that UI is ready, documented operator procedures maintain recoverability. Independently verify each release before proceeding.
-6. **Defer future capabilities.** Implement invitations, Photos authorization, and push preferences only when their real feature work requires them.
+4. **Cut over atomically at the application boundary.** Enforce active accounts on every API; stop Directory-email identity resolution and default-household fallback. Phase 4 Step 1 subsequently introduced relationship/household restrictions and matching UI together. Preserve existing records and reject unauthorized nested updates. Do not leave a legacy-email fallback available to disabled users.
+5. **Expose controlled administration.** The small account management UI and explicit Directory/Household administration shipped with audit and last-Administrator safeguards. Moderation/cross-household overrides did not ship. Independent operator recovery remains necessary. Independently verify each release before proceeding.
+6. **Defer future capabilities.** Implement invitations and Photos authorization only with separately approved feature work. Push preferences were subsequently implemented.
 
-Future implementation verification must cover every matrix route, disabled/unprovisioned users, first binding/conflicts, self/parent/spouse edits, forbidden security-field changes, unassigned/cross-household access, nested relationship writes, moderation without impersonation, and concurrent last-Administrator changes. This document itself requires no application tests.
+Any future permission changes must retain regression coverage of every matrix route, disabled/unprovisioned users, first binding/conflicts, self/parent/spouse edits, forbidden security-field changes, unassigned/cross-household access, nested relationship writes, moderation without impersonation, and concurrent last-Administrator changes. This document itself requires no application tests.
 
 Before cutover, rollback may leave unused additive tables in place. After cutover, the rollback release must retain the account gate and agreed security boundaries. Reverting to the old editable-email/default-household version would reopen access and is not an acceptable routine rollback. Prepare an account-aware rollback build; otherwise recover forward or temporarily restrict access through controlled operator action. Preserve audit and revocation state during recovery; do not restore an old database snapshot merely to roll back code.
 

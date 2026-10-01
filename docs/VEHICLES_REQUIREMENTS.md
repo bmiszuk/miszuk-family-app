@@ -94,12 +94,12 @@ Warranty coverage belongs to the actual purchased part/batch, not only to a gene
 ## Authorization
 
 - Authentication, identity and authorization remain separate concepts.
-- Cloudflare Access authenticates requests; the shared identity layer resolves the authenticated identity to an optional Directory person and effective household under current behavior.
+- Cloudflare Access authenticates requests; the authoritative account gate requires an active provisioned account and active Directory person, with an optional active household.
 - Server/API authorization is authoritative. UI visibility is not security.
 - Vehicle permissions must not automatically inherit Directory spouse/parent permissions.
 - Household grocery access must not imply Vehicle edit/delete rights or automatically establish Vehicle access scope.
 - Integrate Vehicle-specific policies with `src/api/shared/permissions.js`, including appropriate server-side query scope.
-- Design for future centralized Administrator override, household-level authority and potentially module-specific permissions. These roles/overrides do not currently exist; they are not implemented by this document.
+- Centralized account roles and explicit Administrator controls already exist. Vehicle-specific overrides, household authority and module permissions remain undecided; Administrator role is not a universal bypass.
 - Exact Vehicle roles and permissions remain a product-design decision before implementation.
 
 ## Proposed development phases
@@ -123,7 +123,7 @@ These phases are planning guidance, not irrevocable implementation boundaries. D
 - Integrate through existing hash navigation and the app shell, rather than adding another permanent mobile bottom-navigation item.
 - Continue using the existing React app, Cloudflare Worker, Cloudflare Access and D1 database. Add R2 for persistent binary files when that functionality is implemented.
 - Preserve clean extension points for Inventory, warranties and OCR without prematurely implementing them.
-- Follow the existing shared authorization boundary; Directory relationships and current default-household fallback must not silently determine future Vehicle policy.
+- Follow the existing shared authorization boundary; Directory relationships must not silently determine Vehicle policy. The authorization default-household fallback has already been removed.
 
 ## Open Product Decisions
 
@@ -131,7 +131,7 @@ Settle these before Vehicles implementation:
 
 - Ownership model: person, household or both; how multiple owners relate to the vehicle's household and access scope.
 - Exact view/add/edit/delete permissions for vehicles and associated records/documents.
-- Administrator behavior, including cross-household/module correction authority and its integration with the future centralized permission model.
+- Administrator behavior, including cross-household/module correction authority and its integration with the existing explicit permission model.
 - Detailed maintenance category/schedule UX, including due-soon thresholds and how completion advances mileage/time schedules.
 - Which receipt/OCR processing belongs in the initial release versus later phases.
 

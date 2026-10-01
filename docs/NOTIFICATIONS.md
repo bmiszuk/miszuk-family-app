@@ -1,5 +1,9 @@
 # Push notifications: Birthdays and Family Chat
 
+## Current status and remaining acceptance
+
+Deployed at `4d3b89c`: push infrastructure, voluntary family enrollment, Birthdays and Family Chat. Bob’s physical-iPhone foundation pilot passed and was recorded at `0ede46c`; do not repeat that pilot as unfinished implementation. Remaining real-device verification is **Chat between two family members** and **the first naturally scheduled birthday**. Confirm recipient/author behavior and Chat tap routing for the former, and 8 AM Chicago timing, duplicate suppression and Home tap routing for the latter. The category release passed 137 tests, lint/build and authenticated desktop/mobile browser verification; no production test messages or birthdays were created.
+
 ## Current categories
 
 Birthdays and Family Chat are the only automatic categories. Their account-wide switches default **On** when no explicit value exists; saved opt-outs remain off. Device enrollment remains separate, voluntary and explicit. No other category is shown or triggered.
@@ -23,7 +27,7 @@ Synthetic tests cover payload encryption, authorization, opt-outs, dates and dup
 
 Phase 1C expands voluntary enrollment and manual self-tests to every eligible active provisioned application account, including future accounts. Production uses `NOTIFICATIONS_AUDIENCE=active_accounts`; the pilot allowlist is empty. The central account gate requires a verified identity, active account and active Directory person. Approved/unbound identities still complete secure first-use activation through that gate. Enrollment and each send also recheck account/person/bound-identity eligibility in SQL. Household assignment and Administrator role do not grant or restrict notification eligibility.
 
-Consent remains explicit and per device. Users can read, enroll, detach and test only their own devices. No rollout message is sent, no browser permission is requested automatically, and only the two categories above have automatic triggers. Both existing server kill switches remain authoritative. VAPID keys, subscriptions and account data are preserved; no migration is needed.
+Consent remains explicit and per device. Users can read, enroll, detach and test only their own devices. No rollout message is sent, no browser permission is requested automatically, and only the two categories above have automatic triggers. Both existing server kill switches remain authoritative. Phase 1C preserved VAPID keys, subscriptions and account data without a migration. The later category release added migration 0010 as described above.
 
 Rollback: `pre-push-phase1c-2026-09-30` at documentation checkpoint `0ede46c` (application baseline `64bf121`). Redeploy that checkpoint to return to the Bob-only pilot. Its code uses the exact pilot allowlist and ignores the newer audience setting; clear that setting when maintaining configuration afterward. Retain the VAPID secret, service worker and D1 data. Family subscriptions enrolled before rollback remain stored but become ineligible for new sends while the pilot restriction applies. Both switches can instead be set false to suspend all new enrollment/sends. Already accepted provider messages cannot be recalled.
 
@@ -35,7 +39,7 @@ The pinned MIT library `@block65/webcrypto-web-push@2.0.0` constructs RFC 8291 A
 
 ## Storage and API
 
-Migration `0009_push_notifications.sql` is additive and seeds nothing. `push_subscriptions` references `app_users` restrictively, permits up to ten devices per account through atomic registration, and stores a unique endpoint, browser keys, VAPID key identifier, label, enabled state, expiry, timestamps, revision and bounded result/failure fields. List responses contain only display/status fields. `notification_preferences` stores an account's versioned allowlisted categories (birthdays, chat, polls, dinner, calendar, family_dates, vehicles); missing birthdays/chat values default on, other categories default off, and a test-send cooldown. No preference controls imply that unimplemented triggers exist.
+Migration `0009_push_notifications.sql` is additive and seeds nothing. `push_subscriptions` references `app_users` restrictively, permits up to ten devices per account through atomic registration, and stores a unique endpoint, browser keys, VAPID key identifier, label, enabled state, expiry, timestamps, revision and bounded result/failure fields. List responses contain only display/status fields. `notification_preferences` stores an account's versioned allowlisted categories (birthdays, chat, polls, dinner, calendar, family_dates, vehicles); missing birthdays/chat values default on, other categories default off, with a separate test-send cooldown. Only Birthdays and Family Chat are exposed as category controls; reserved keys do not imply implemented triggers.
 
 Every endpoint is centrally account-gated:
 
@@ -50,7 +54,7 @@ The sender rechecks active account, active person, bound identity, enabled devic
 
 ## Browser and privacy
 
-The Notifications link opens a settings page without adding a bottom-navigation item. No permission request occurs on page load or service-worker registration. iPhone/iPad Home Screen installation, browser support, permission and rollout states are distinct. Actual iPhone delivery and Access-expiry behavior require the later physical-device pilot.
+The Notifications link opens a settings page without adding a bottom-navigation item. No permission request occurs on page load or service-worker registration. iPhone/iPad Home Screen installation, browser support, permission and rollout states are distinct. The physical-iPhone foundation pilot is complete. The two category checks above remain; notification taps always use normal Access/account enforcement.
 
 `/sw.js` is notification-only and served with no-cache revalidation. Only validated version-1 payloads and Home/Chat destinations are accepted; invalid payloads show generic content and route Home. Same-origin navigation never bypasses Access. Preserve the manifest identity and this stable worker URL across releases. Lock-screen content must remain generic unless separately approved; the manual test is **Miszuk Family / Test notification**. No chat text, calendar details or survey responses are sent.
 
@@ -85,11 +89,11 @@ The stable key ID is `miszuk-push-2026-09-30-v1`; contact remains `mailto:bob@mi
 
 Recovery source: the Bitwarden Secure Note **Miszuk Family — Production Web Push VAPID**, containing the matched private/public pair and key ID. An authorized successor must be able to unlock that vault through the family’s independent break-glass arrangements. The exact emergency-access/MFA mechanism is maintained outside this repository; this release does not independently verify it. Do not rely on the portal or family email alone to recover the vault.
 
-To restore: first disable both rollout switches. Retrieve the existing matched record through authorized Bitwarden access. Using Cloudflare’s secret editor or interactive `wrangler secret put VAPID_PRIVATE_KEY`, restore the private value without putting it in command arguments, logs, chat or files. Restore the matching public key and key ID in configuration, verify the key-ID/public-key match, and re-enable only the exact Bob account allowlist. Cloudflare does not return a stored secret’s plaintext. Never generate a replacement merely because a deployment credential expired. If the recovery record is irretrievably lost, stop sending; deliberate key rotation and device re-enrollment require a separate operator action.
+To restore: first disable both rollout switches. Retrieve the existing matched record through authorized Bitwarden access. Using Cloudflare’s secret editor or interactive `wrangler secret put VAPID_PRIVATE_KEY`, restore the private value without putting it in command arguments, logs, chat or files. Restore the matching public key and key ID in configuration, verify the key-ID/public-key match, and restore the currently approved rollout audience (`active_accounts` for family enrollment), or deliberately use the exact-ID pilot restriction for a separately chosen recovery test. Do not silently leave family enrollment in historical Bob-only mode. Cloudflare does not return a stored secret’s plaintext. Never generate a replacement merely because a deployment credential expired. If the recovery record is irretrievably lost, stop sending; deliberate key rotation and device re-enrollment require a separate operator action.
 
 Rollback checkpoint: `pre-push-phase1b-2026-09-30` at `87e6a9c`. Redeploy that checkpoint to restore both false switches and an empty allowlist, retaining the private secret, notification tables and `/sw.js`. Do not delete accounts, subscriptions, or restore D1 to roll back this pilot. The kill switches stop new sends/enrollment; a push already accepted by a provider cannot be recalled.
 
-### Physical iPhone acceptance test (operator performs after deployment)
+### Physical iPhone foundation acceptance procedure (completed; retained for regression testing)
 
 1. Use an iPhone running iOS 16.4 or later. In Safari open `https://family.miszuk.com`, sign in as Bob, use Share → Add to Home Screen (enable Open as Web App if offered), and retain the Miszuk Family name/icon. An existing installed copy may be reused. Launch from its Home Screen icon.
 2. Open Notifications, tap **Enable on this device**, and choose **Allow** in the iOS prompt. Expect Enabled on this device and one iPhone entry. If permission was previously denied, change Miszuk Family notification permissions in iOS Settings before retrying. Do not repeatedly request permission.

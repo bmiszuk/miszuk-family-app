@@ -2,6 +2,8 @@
 
 One React application, one Cloudflare Worker, and one D1 database remain the deployment unit.
 
+Status reviewed September 30, 2026 at application release `4d3b89c`: architecture refactor and Users & Permissions through Phase 4 are complete; family push enrollment and Birthday/Chat categories are deployed. See [Roadmap](docs/ROADMAP.md) for remaining acceptance checks and future work. No further refactor is required before feature development.
+
 - `src/app`: shell, current-user loading and existing hash navigation.
 - `src/features`: feature pages and their Home cards. Home composes these cards; groceries owns Quick Add, calendar owns its summary, chat owns the pinned message, and Directory owns family dates.
 - `src/shared`: browser HTTP/hooks and shared UI. Polling and mounted-page behavior are intentionally unchanged.
@@ -29,7 +31,7 @@ Invitations, Chat moderation, cross-household administration, Photos and Vehicle
 
 Before or alongside Vehicles, define its own ownership/actions explicitly. Further splitting `domain/familyDisplay.js`, feature CSS extraction and coordinating duplicate polling can proceed separately when useful; none is required to add a feature handler. The legacy endpoints must be included in any future system-wide access/revocation rollout.
 
-## Notifications — voluntary family enrollment
+## Notifications — family enrollment, Birthdays and Chat
 
 `src/api/notifications` owns authenticated account-only configuration, subscriptions, preferences and the test sender. The central account gate and origin checks apply to every route. Members and Administrators have identical own-device rights; there is no send-as or cross-account subscription access. Migration `0009_push_notifications.sql` adds `push_subscriptions` and `notification_preferences`, plus an identity-replacement trigger that invalidates devices in the same transaction as replacement.
 

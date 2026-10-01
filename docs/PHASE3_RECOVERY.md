@@ -1,6 +1,6 @@
 # Phase 3 account-boundary recovery
 
-Phase 3 enforces accounts before all API routing. Household/relationship management eligibility is unchanged; Administrator overrides and administration UI remain deferred.
+Phase 3 introduced account enforcement before all API routing. Phase 4 subsequently completed explicit household/relationship and account administration. Phase-specific sections below are historical checkpoints, not a recommendation to deploy an old release over current security/data expectations. See [current notification rollback requirements](NOTIFICATIONS.md) and [architecture](../ARCHITECTURE.md).
 
 ## Safe rollback
 
@@ -10,13 +10,13 @@ The emergency source is `scripts/account-recovery-worker.js`. Its tested bundle 
 
 Using authorized Cloudflare operator access, deploy that bundle to the existing Worker while preserving existing D1, Access configuration, secret bindings, hostname/routes and asset run-worker-first settings. Do not upload credentials or database backups. Verify direct API denial and maintenance before repairing forward. The private operator deployment helper retains current bindings and deploys only the prepared bundle.
 
-After a verified repair, redeploy the tested Phase 3-or-later application and frontend together. Never turn off the gate or add an email/header bypass.
+After a verified repair, redeploy a tested matched application/frontend preserving the current Phase 4 permissions and notification lifecycle. Never turn off the gate or add an email/header bypass.
 
 ## Account recovery
 
 Bob is the sole application Administrator. Independent recovery uses existing Cloudflare/D1 operator credentials stored outside Git. Inspect the verified Access identity and existing approved account/person binding before any repair; require exact identity confirmation, back up first, and record an operator security-audit event in the same controlled operation. Preserve at least one active Administrator with an active linked person and usable identity. Never guess a subject, reassign a conflicting identity silently, or bulk provision Directory emails.
 
-No account-management API exists in Phase 3. The Directory API blocks deletion of any account-linked person and freezes legacy login email. Operator recovery is separate from ordinary Directory editing.
+At the historical Phase 3 checkpoint no account-management API existed; Phase 4 now supplies controlled account administration. The Directory API blocks deletion of any account-linked person and freezes legacy login email. Operator recovery is separate from ordinary Directory editing.
 
 ## Local development
 

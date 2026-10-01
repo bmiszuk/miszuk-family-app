@@ -1,6 +1,6 @@
 # Miszuk Family Digital Systems Handbook — Outline
 
-Status: initial outline and information-gathering document, September 19, 2026.
+Status: outline and information-gathering document, created September 19; repository status reconciled September 30, 2026. Home infrastructure has not been newly inventoried by this documentation audit.
 Audience: Bob and a technically competent family member maintaining the systems without Bob or AI assistance.
 
 ## Scope and evidence
@@ -42,7 +42,7 @@ Never record passwords, tokens, private keys, recovery codes, private calendar U
 ## 3. Email / Google Workspace
 
 **Repository-known**
-- App documentation describes Cloudflare Access email-PIN sign-in and optional Directory login-email matching.
+- App documentation describes Cloudflare Access email-PIN authentication plus provisioned application accounts linked to active Directory people. Editable Directory email no longer establishes identity.
 - This does not establish Google Workspace tenancy, mail routing, mailbox ownership, or administrator access.
 
 **Collect / verify**
@@ -58,15 +58,15 @@ Never record passwords, tokens, private keys, recovery codes, private calendar U
 - `src/app` owns the shell, identity loading, and hash navigation; `src/features` owns feature pages and Home cards; `src/shared` supplies browser utilities/UI; `src/domain` contains pure shared rules.
 - `src/api/<feature>` owns feature validation and persistence; shared authentication, identity, and permission modules enforce request boundaries.
 - Current features include Groceries, Dinner, Chat, Directory, Home summaries, and the read-only Cozi Calendar. Legacy APIs remain for compatibility.
-- Directory permits self, parent-to-child, and spouse editing. Chat ownership and household-scoped Groceries/Dinner have distinct policies; general administrator roles are not implemented.
-- The PWA is documented as online-only. Local development and portable preview use separate local database state.
+- Directory permits self, parent-to-child and spouse ordinary profile editing plus explicit Administrator correction. Administrators manage households, relationships and application accounts; Chat ownership and household-scoped Groceries/Dinner remain distinct policies. Users & Permissions through Phase 4 is complete.
+- The PWA is online-only with a notification-only service worker. Family enrollment and Birthday/Chat categories are deployed; see [Notifications](../NOTIFICATIONS.md) for remaining device checks and VAPID recovery. Local development and portable preview use separate local database state.
 
 **Collect / verify**
 - [ ] Record the actually deployed revision, feature inventory, user-facing entry points, and known limitations.
 - [ ] Provide a short file map, local setup checklist, test workflow, and deployment/rollback procedure executable by a successor.
-- [ ] Explain login-email mapping, household assignment/default fallback, and relationship management without publishing real family records.
+- [ ] Explain provisioned identity binding, no-household denial, Administrator household/relationship management and account recovery without publishing real family records.
 - [ ] Document Cozi ownership, secret recovery, outage behavior, and verification of recurrence/timezones; display timezone is America/Chicago.
-- [ ] Resolve outdated README statements before using them as current operational instructions.
+- [ ] Verify the current README and feature runbooks against actual operator tooling before successor handoff; private helper locations and access remain to be documented.
 
 ## 5. GitHub / Source Control
 
@@ -143,7 +143,7 @@ Never record passwords, tokens, private keys, recovery codes, private calendar U
 
 **Repository-known**
 - README/migration guidance calls for a private remote D1 export before production migrations; deployment does not automatically apply migrations.
-- Historical backup references are not proof of a current schedule, retained usable backup, or successful restore.
+- Release `4d3b89c` recorded a private D1 export/restore with matching fingerprints for all 15 pre-migration tables. This is evidence for that release, not proof of a recurring backup schedule or successor access.
 
 **Collect / verify**
 - [ ] Build a backup matrix for D1, source, DNS/configuration, email, home guests, service databases, archive, and uploads.
@@ -158,7 +158,7 @@ Never record passwords, tokens, private keys, recovery codes, private calendar U
 - Existing navigation belongs to `src/app`; feature-specific policies belong at server boundaries. Hiding a navigation link is not authorization.
 
 **Collect / verify**
-- [ ] Confirm the intended platform, hosting location, initial audience, and eventual sharing/upload requirements with Bob.
+- [ ] Use the agreed Immich/Bob-only/read-only-archive direction in [Photos requirements](../PHOTOS_REQUIREMENTS.md); collect host placement and unresolved sharing/upload choices rather than reopening settled decisions.
 - [ ] Record the authoritative archive, read-only indexing boundaries, excluded/private folders, and separate upload destination before implementation.
 - [ ] Define direct-hostname protection as well as portal visibility; record external-service authentication and origin-access controls.
 - [ ] Collect sizing, database/thumbnail storage needs, backups, upgrades, and recovery responsibilities independently of the archive.
@@ -167,13 +167,13 @@ Never record passwords, tokens, private keys, recovery codes, private calendar U
 ## 13. Security and Credentials
 
 **Repository-known**
-- Trusted Access identity maps to an optional Directory person and household; client-supplied email is not authenticated identity.
+- Trusted Access identity must map to an active provisioned account and active Directory person; the household is optional and has no authorization fallback. Client-supplied email is not authenticated identity.
 - Shared policies deny unknown actions; UI visibility does not replace API enforcement. Directory relationships are not universal permission grants.
 - Local development bypass is documented as loopback-only and must not be enabled in production.
 
 **Collect / verify**
 - [ ] Approved password-manager/vault location, ownership, successor access, MFA recovery process, and offline emergency instructions.
-- [ ] Account and secret inventory by name/purpose only, with authorized recovery location and rotation responsibility.
+- [ ] Account and secret inventory by name/purpose only, with authorized recovery location and rotation responsibility. Notification docs identify the operator-confirmed Bitwarden VAPID recovery note; successor vault/MFA recovery still needs independent verification.
 - [ ] Join/leave/revocation procedure across Cloudflare, app identity, GitHub, email, and future external services.
 - [ ] Incident response contacts, device-loss procedure, audit/log access, and restricted-document handling rules.
 

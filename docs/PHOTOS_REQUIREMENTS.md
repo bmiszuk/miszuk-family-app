@@ -40,9 +40,9 @@ These requirements record Bob's supplied decisions. Repository context is limite
 ## Family app integration
 
 - Eventually add a Photos-specific authorization capability using the existing separation of trusted authentication, identity resolution, and feature policy.
-- The existing architecture places authentication in `src/api/shared/auth.js`, identity mapping in `src/api/shared/identity.js`, and feature policy in `src/api/shared/permissions.js`. Reuse those boundaries without inheriting unrelated feature permissions.
+- The existing architecture places authentication in `src/api/shared/auth.js`, authoritative account/person resolution in `src/api/shared/accounts.js` and `accountGate.js`, and feature policy in `src/api/shared/permissions.js`. Reuse those boundaries without inheriting unrelated feature permissions.
 - Do not automatically grant Photos access based solely on household membership, Directory relationships, or an editable Directory login-email field.
-- Initially expose a Photos destination only to the specifically authorized Bob identity. The trusted identity binding and capability configuration remain to be designed; do not guess an email address or use a mutable Directory field as the grant itself.
+- Initially expose a Photos destination only to the specifically authorized Bob identity. Use the existing provisioned account identity. Photos capability configuration remains to be designed; neither Administrator role nor a mutable Directory field grants Photos access.
 - Integrate through existing navigation in `src/app`, without another permanent mobile bottom-navigation button.
 - The first integration may simply open `photos.miszuk.com`. No embedded gallery, photo proxy, or photo storage in the Worker/D1 is required.
 - Portal authorization and the separate Photos-host policy must agree on the intended audience; direct-host protection remains independently enforced.

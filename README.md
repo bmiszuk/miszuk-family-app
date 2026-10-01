@@ -1,22 +1,28 @@
 # Miszuk Family
 
-A private household portal at https://family.miszuk.com. React/Vite provides the dashboard; a Cloudflare Worker serves its assets and API; D1 (`family-db`) stores shared records; Cloudflare Access controls membership.
+A private family portal at https://family.miszuk.com, not a genealogy application. React/Vite serves the UI; one Cloudflare Worker serves assets/API; D1 (`family-db`) stores application data. Cloudflare Access authenticates; active provisioned application accounts authorize entry.
 
-## First usable release
+## Current status
 
-- Shared groceries: add, edit quantities, check off, remove, and explicitly import the old browser-only list.
-- Family News: create, edit, and remove announcements with a trusted author and date.
-- Calendar: create, edit, and remove timed or all-day events; upcoming view and an option to include past events.
-- All three sections refresh every 15 seconds while visible and when the window regains focus.
-- Version checks reject stale changes instead of overwriting another family member's work. Cancel and reopen an editor after a conflict to use the latest record.
-- Removed records are soft-deleted. They disappear from the app but remain in D1 for recovery; no restore UI is included yet.
-- Home summarizes existing groceries, calendar events, and news. Navigation opens one section at a time, with a fixed bottom bar on phones and top navigation on desktop.
-- Grocery rows use inline quantities, text-to-edit controls, and compact removal controls with confirmation.
-- Section URLs (`#home`, `#groceries`, `#calendar`, `#news`) support direct links and browser back/forward. Switching sections preserves editor drafts; reloading still clears unsaved drafts.
-- Family Directory supports birthdays with optional years, one shared marriage/anniversary record, and directed parent/child relationships. No login or email is needed for a directory person.
-- House Projects, Photos, Recipes, and Documents remain unimplemented.
+Application baseline `4d3b89c`, documentation audited September 30, 2026. Architecture refactor and Users & Permissions through Phase 4 are complete. Existing application behavior is stable.
 
-This is one shared household: every member allowed through this Access application can read, add, edit, and remove household content. It is not a multi-family service. Original family/person APIs and tables are retained for compatibility and now sit behind the same authentication checks.
+- Home dashboard, household Groceries/requesters and Dinner signup.
+- Family Chat with author-owned messages and Home notices.
+- Directory people, birthdays (optional years), spouse/anniversary and parent/child relationships; a person need not have an account.
+- Read-only Cozi Calendar and Home upcoming events, displayed in America/Chicago. Legacy local calendar APIs/data remain for compatibility; the current UI does not edit them.
+- Explicit Administrator Directory/Household and account administration, with transactional audits and last-usable-Administrator protection.
+- Mobile navigation, installable House M PWA, voluntary per-device push enrollment and account-wide Birthday/Chat switches. No other notification triggers are enabled.
+
+The physical-iPhone push foundation pilot passed. Chat between two family members and the first naturally scheduled birthday remain real-device category acceptance checks. See [notification operations](docs/NOTIFICATIONS.md).
+
+## Documentation map
+
+- [Roadmap](docs/ROADMAP.md): completed work, candidates, later projects and deferred options; no next project is selected.
+- [Architecture](ARCHITECTURE.md): current module and security boundaries.
+- [Users & Permissions](docs/USERS_PERMISSIONS.md) and [recovery](docs/PHASE3_RECOVERY.md): implemented policy, account operations and historical recovery checkpoints.
+- [Cozi](docs/cozi-calendar.md), [Notifications](docs/NOTIFICATIONS.md), [migrations](migrations/README.md): feature-specific operations.
+- [Vehicles](docs/VEHICLES_REQUIREMENTS.md), [Photos](docs/PHOTOS_REQUIREMENTS.md): unimplemented requirements, not authorization to build.
+- [Digital Systems Handbook outline](docs/infrastructure/HANDBOOK_OUTLINE.md): successor/infrastructure information still to collect.
 
 ## Local development
 
@@ -43,93 +49,45 @@ This builds the production frontend, bundles the Worker with Vite, and serves bo
 
 `npm run preview` is the regular Wrangler production-build preview. Run `npm run db:local` before it if the local database is new.
 
-## Authentication
+## Authentication, identity and permissions
 
-Production API requests require a signed `Cf-Access-Jwt-Assertion`. The Worker validates the RSA signature, issuer, application audience, expiration, and member claims with `jose`. Raw email headers and client-supplied author fields are not trusted. Requests without valid authentication cannot reach D1.
+Every API route, including legacy APIs and cached Cozi responses, requires a validated Cloudflare Access JWT followed by an active provisioned account and active Directory person. Approved/unbound identities activate through verified first use; arbitrary authenticated but unprovisioned users receive no family data. Legacy `people.login_email` is frozen and is not a security identity. There is no default-household authorization fallback.
 
-`wrangler.jsonc` contains these **non-secret** identifiers, observed in the sign-in redirect for `family.miszuk.com` on 2026-09-05:
+Members edit ordinary Directory information for self, direct children or spouse; Administrators have explicitly named profile/household/relationship/account actions. Groceries and Dinner remain household-scoped for everyone. Chat authorship is forced to the current person. Administrator role is not a universal bypass. Browser writes reject mismatched origins and APIs are private/no-store.
 
-- `ACCESS_TEAM_DOMAIN`: `broken-bush-7200.cloudflareaccess.com`
-- `ACCESS_AUD`: `2d6488c2019b05588c29467e0bd8173b74d46c437efd7225834e9a84090ef1c8`
+Protect the full custom hostname with Access, plus any alternate/preview hosts. Never enable `LOCAL_DEV` remotely. Keep Access issuer/audience identifiers aligned with the intended application; neither they nor editable client fields substitute for JWT validation.
 
-Confirm these still belong to the intended Access application before deployment, especially if the Access application has been recreated. Protect the full custom hostname, not only `/api`. Also protect or disable alternate `workers.dev` and preview URLs in Cloudflare. The Worker protects API data independently; Access should protect the page/assets too.
+## Data and date behavior
 
-Browser mutations use JSON and reject cross-site/mismatched Origin headers. API responses are `private, no-store`. The UI escapes text, preserves form input after failures, and offers a sign-in link on expired sessions.
+See the [migration inventory](migrations/README.md). Existing family data is preserved; record version checks reject stale changes. Soft deletion exists for family content, but not every table uses it (for example, detaching a push device deletes its subscription). Account-linked people cannot be deleted; account disabling preserves authorship/history.
 
-## Database
+Birthdays reuse Directory dates: MM-DD or YYYY-MM-DD. One spouse relationship stores the anniversary; directed parent links derive children and parents. Home family dates use America/Chicago, year rollover, and February 28 observance for February 29 in non-leap years. Ages appear only with a birth year. The Directory no longer has a duplicate upcoming-dates section.
 
-- `0001_initial_schema.sql`: existing `families`, `people`, `relationships`, `events`.
-- `0002_household_portal.sql`: additive `grocery_items`, `news_posts`, `household_events`.
-- `0003_family_directory.sql`: reuses `people` and `relationships`; adds record versions, soft deletion, a marriage anniversary date, and relationship protection triggers. Creates a default family only when no family exists.
+The legacy browser grocery import remains explicit, transactional and deduplicated; its original local storage value is retained. It is not a recovery mechanism for previously lost browser data.
 
-The older tables are neither renamed nor deleted. The new household calendar deliberately uses its own table so legacy person-linked events are not silently repurposed or migrated.
+## Validation and release
 
-Times are saved in UTC; the UI displays timed events in the viewer's timezone. All-day dates are stored as `YYYY-MM-DD`, with inclusive end dates, and do not shift across timezones. This release has no recurrence, calendar-provider sync, or notifications. During an ambiguous daylight-saving fall-back hour the browser chooses its default occurrence; schedule outside that hour if the distinction matters.
+Use `npm run check` for application changes: lint, the full Node test suite and production frontend build. Tests include actual local Cloudflare runtime/D1 checks and synthetic push cryptography/provider tests. Documentation-only changes need scope, link and whitespace checks, not application tests or deployment.
 
-Old groceries are imported only after a member clicks the import button on the **same browser and origin** where they were saved. The original `miszuk-grocery-list` value is retained as a backup. D1 imports are transactional in batches of up to 100 and deduplicated by member and legacy item ID; retries do not duplicate or resurrect removed records. A list previously lost by the original implementation cannot be recovered by this import.
+Before any separately authorized production change:
 
-## Validation
+1. Confirm current release, account security state, bindings and rollback checkpoint. Use the existing Worker/database/domain.
+2. For D1 changes, export privately **outside the repository**, restore locally and verify table fingerprints plus integrity/FKs. Reconcile migration history before applying only intended migrations; missing ledger entries can represent manually applied history.
+3. Run relevant checks; deploy matching frontend/backend only after they pass. `npm run deploy` checks/builds then invokes Wrangler; it does not apply D1 migrations. Standard Wrangler deploy synchronizes Cron; any alternate upload helper must also preserve secret bindings/assets and synchronize schedules.
+4. Verify the changed feature and account boundary without unnecessary real-data mutations or unsolicited pushes. Device receipt is not proved by provider acceptance alone.
 
-```sh
-npm run check
-```
+Rollback must preserve current account enforcement, revocation, privileged-write restrictions, push secrets/subscriptions and service worker. Historical pre-account tags are not safe routine rollbacks. Use current feature operating notes and the account-aware maintenance recovery source when necessary; never restore an old D1 snapshot merely to roll back code.
 
-This runs ESLint, 30 Node tests, and the production frontend build. Tests cover additive migration preservation, CRUD, stale-write protection, import retry behavior, validation, actual Access JWT verification, calendar dates, and the Worker against D1 in Cloudflare's local runtime. The unit SQL adapter uses Node's built-in SQLite; the runtime integration test additionally checks actual D1 behavior.
+## iPhone PWA
 
-## Deploy to the existing Cloudflare account
+In Safari, sign in, Share → Add to Home Screen, keep Open as Web App enabled when offered, and retain Miszuk Family. Launch the House M icon. The vector master is `public/app-icons/house-m.svg`; icon assets include 1024/512/192/180/32 sizes and a separate maskable icon.
 
-Do not create a new Worker, new database, or temporary account. Keep the existing Worker name, `family-db` database ID, and custom-domain route.
+This remains online-only. The notification-only `/sw.js` handles display and safe Home/Chat taps; it does not cache family data or bypass Access/account authentication. Notification permission requires explicit action in Notifications; device enrollment and account-wide category preferences are separate. No intrusive installation prompt exists.
 
-1. Sign into the Cloudflare account that owns the existing Worker: `npx wrangler login`.
-2. Inspect the existing deployment, Access allow policy, hostnames, and bindings in the dashboard. Confirm the configured database ID is the production `family-db`.
-3. Inspect pending migrations with `npm run db:remote:list`. Export the production database before applying changes: `npx wrangler d1 export family-db --remote --output family-db-backup.sql`. Store the export privately and outside Git.
-4. Apply pending migrations with `npm run db:remote:apply`. If existing tables were created manually and migration tracking is absent, reconcile the migration history before proceeding; do not drop tables to resolve that mismatch.
-5. Deploy with `npm run deploy`. It runs lint, tests, and a fresh frontend build before `wrangler deploy`. Database migrations remain an explicit prior step.
-6. At `family.miszuk.com`, verify an unauthenticated browser is redirected to Access and a disallowed identity is denied. Sign in with two allowed family members on separate devices. Add groceries on one, refresh the other, then test completing an item, posting news, and creating an event. Check persistence after both reload.
+## Repository hygiene and historical releases
 
-Rollback: restore the prior Worker version in Cloudflare if needed. The additive tables can remain unused; no destructive down-migration is required. Verify D1 backup/Time Travel settings as part of the production handoff.
+Keep exports, credentials, private recovery artifacts and local runtime data outside Git. VAPID recovery location/procedure is documented without the key in [Notifications](docs/NOTIFICATIONS.md).
 
-Production release verified on 2026-09-05 (America/Chicago):
+Earlier release notes recorded local SQLite state removed from the Git index but historical database copies remaining in Git history. That is a separate access/history review item, not proof that ignore rules sanitize history. Do not publish or rewrite history without a scoped review.
 
-- Application commit: fef4f06. Worker deployment ID: b064b53463f54dce918a017732334822.
-- Backed up remote family-db outside Git and applied 0002_household_portal.sql; 0001 was already applied.
-- Deployed to the existing miszuk-family-app Worker. The existing family.miszuk.com/* route selects it; the separate miszuk-family custom-domain origin was preserved.
-- Used Cloudflare's direct assets/module upload API with a Vite Worker bundle because this Windows sandbox prevented Wrangler's native esbuild from resolving the entry file. The normal npm deployment command remains suitable for unrestricted development environments.
-- Signed into family.miszuk.com through Access. Verified grocery creation/completion, news creation/editing, calendar creation/date editing, reload persistence, and a second page loading the same records. Queried remote D1 to confirm the persisted values, then removed all three test records through the UI and confirmed their soft deletion.
-- Unauthenticated requests redirect to Access. Testing with a second family identity/device and a disallowed identity remains a household acceptance check; these were not exercised during this deployment.
-
-## Repository hygiene
-
-Previously tracked `.wrangler` SQLite state was removed from the Git index in this release. Local databases, credentials, dependencies, and generated builds are excluded. Historical database copies remain in Git history.
-
-Keep database backups, `.dev.vars`, and `.env` out of Git. The unused Vite starter assets/styles are retained to avoid mixing unrelated cleanup into this release.
-
-## Directory release
-
-Rollback point: pre-directory-2026-09-06 (c4297b1). The additive migration can remain when rolling back the Worker.
-
-Birthdays reuse people.birth_date: MM-DD without a year, or YYYY-MM-DD with one. Marriage links use relationship_type=spouse, with canonical spouse IDs and one anniversary_date; parent links use person1_id as parent and person2_id as child. The API rejects duplicate marriages, a second current spouse, self-links, duplicate parent links, and parent cycles. Remove a person's links first before confirming deletion; all removals are soft deletes. These are household relationships, not a marriage-history or genealogy system.
-
-Home shows today's celebrations prominently and up to five upcoming celebrations; Directory shows the complete next-30-day list. Dates use America/Chicago, including year rollover. February 29 is observed February 28 in non-leap years. Ages appear only for birthdays with a recorded year. Anniversary year is optional too. Notifications are on the dashboard only, not email or push messages.
-
-Verified locally: people add/edit/remove, spouse and parent/child assignment from both directions, anniversary editing, relationship removal, protected deletion, reload persistence, and birthday display with and without age. Desktop 1440x1000 and phone 375x812 layouts were inspected in-browser. Existing household feature tests and actual Cloudflare D1 runtime tests remain in the suite.
-
-## iPhone installation / PWA
-
-In Safari, sign in at https://family.miszuk.com, open Share, choose Add to Home Screen, keep Open as Web App enabled when offered, and confirm the name Miszuk Family. Launch the new House M icon. iOS applies the icon's corner mask; PNGs have an opaque square background. The vector master is public/app-icons/house-m.svg; PNG sizes are 1024, 512, 192, 180 (Apple), and 32 (favicon), plus a separately padded 512 maskable icon.
-
-The manifest uses credentials because Cloudflare Access protects this origin. This is an online-only install: no service worker, offline family-data cache, or authentication bypass is introduced. Access continues to control all requests. A valid session should load the portal; an expired session must complete email-PIN login. Safari/installed-app cookie sharing and the external Access redirect returning to standalone mode require physical-iPhone verification. Desktop device-size testing cannot verify the iOS installation sheet, Home Screen mask, standalone storage, or status/Home-indicator insets. No install banner or push notifications are included.
-
-Rollback before PWA changes: pre-pwa-2026-09-07 (1ab05d8). PWA changes require no D1 migration.
-
-## Chat, notices, and grocery requester
-
-Migration 0004_chat_requester.sql adds nullable directory-person references to groceries and news_posts, and a false-by-default home_notice flag. Existing news titles, bodies, authors and dates are retained. The UI calls the existing /api/news endpoint, sorts messages oldest first, and keeps old #news links working as Chat. The optional directory sender is a family label; the trusted authenticated author remains stored separately. Unpin uses a version-checked PATCH to the same message. Old clients omitting the new fields preserve existing assignments on updates.
-
-Home shows only explicitly pinned notices and short, disambiguated birthday/anniversary names. Directory names and dates are unchanged. Chat uses existing 15-second polling, with a bounded scroll area; it follows new messages only while the reader is at the bottom. No push notifications or real-time service was added.
-
-Rollback before these changes: pre-chat-requester-2026-09-07 (ad80325). The additive columns may remain when rolling back the app; old clients do not use them. A private production D1 export was taken before migration.
-
-## Login identity mapping
-
-Migration 0005_login_identity.sql adds optional login_email to people with a case-insensitive unique index for active people. Enter addresses in the existing Directory editor; no addresses are inferred or populated. After changing a login email, reload the app to refresh /api/me. The server matches only the verified Cloudflare Access email; the browser cannot supply the authenticated identity. Unmapped logins retain existing behavior. New Chat and grocery forms default to the mapped person after each successful submission; saved records retain their sender/requester, and selections can still be changed or cleared. Rollback: pre-identity-2026-09-08 (d56e82b); the additive column can remain during an app rollback.
+Early releases used one shared household, editable login-email matching, a local Calendar editor and no service worker. Those descriptions are superseded. Git history retains the original release notes and tags; use current operating docs, not an early tag's rollback instructions, for recovery.

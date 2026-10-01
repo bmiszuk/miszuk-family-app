@@ -1,6 +1,6 @@
 # Cozi calendar connection
 
-Production remains on the previous release until the private feed is configured and this change is deployed. No database migration is needed. Existing calendar tables and API data are retained; the UI uses the read-only `/api/cozi-calendar` endpoint.
+Cozi is deployed and supplies the current read-only Calendar and Home summary. The setup instructions below are for operator recovery or deliberate reconfiguration, not pending installation. This integration required no database migration. Existing calendar tables and API data are retained; the UI uses the read-only `/api/cozi-calendar` endpoint.
 
 ## Configure the private URL
 
@@ -18,7 +18,7 @@ HTTPS Cozi domains are accepted; `webcal:` is upgraded to HTTPS. Redirects are n
 - Upcoming 90-day window, including ongoing events; times displayed in America/Chicago. ICS all-day DTEND stays exclusive, with the last included day shown to readers.
 - ICAL.js handles RRULE, RDATE and EXDATE. Individual RECURRENCE-ID moves/cancellations and whole-series cancellations are supported. Embedded VTIMEZONE is honored; IANA timezone fallback uses Temporal. Floating date-times use X-WR-TIMEZONE or America/Chicago.
 - RANGE=THISANDFUTURE and malformed/unknown timezones produce an unavailable state rather than silently showing potentially wrong dates. These uncommon feed forms require real-feed validation if present.
-- Five-minute server caching, one-minute failure caching, coalesced in-flight requests. The cache key hashes the secret and results are served only after Cloudflare Access authentication. Browser API responses are private/no-store.
+- Five-minute server caching, one-minute failure caching, coalesced in-flight requests. The cache key hashes the secret and results are served only after Cloudflare authentication and the active application-account/person gate. Browser API responses are private/no-store.
 - Limits: 10-second fetch timeout, 2 MiB feed, 2,000 event groups/returned occurrences, 20,000 recurrence steps. Large or pathological feeds fail safely.
 - Only normalized titles, dates, location, attendee display names and category labels are returned. No feed URL, raw ICS, attendee email, raw UID, or event description is returned. URLs embedded in display text are omitted. Cozi-specific member metadata can only be confirmed against the real feed.
 - “Open Cozi” links to https://my.cozi.com/ for editing. No second calendar editor, import into D1, scheduled job or new database schema is created.
@@ -27,4 +27,4 @@ HTTPS Cozi domains are accepted; `webcal:` is upgraded to HTTPS. Redirects are n
 
 `npm run build` then `node scripts/preview.mjs --cozi-sample` runs the real Worker locally with `tests/fixtures/cozi-sample.ics` and intercepts outbound fetches. The sample is entirely synthetic, dated September 2026, and never published as a public asset. Without `--cozi-sample`, local preview shows the not-connected state. Tests use synthetic feeds and never contact a real Cozi calendar.
 
-Before release with the real secret, verify actual Cozi events (including recurrence/all-day times and available member names), the Home summary, five-minute refresh behavior, and that no private URL appears in API responses or client assets. Do not alter family calendar data to perform this read-only check.
+After any future connection/parser change, verify actual Cozi events (including recurrence/all-day times and available member names), the Home summary, five-minute refresh behavior, and that no private URL appears in API responses or client assets. Do not alter family calendar data to perform this read-only check.
