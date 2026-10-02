@@ -5,6 +5,8 @@ import { build } from 'vite';
 import { Miniflare } from 'miniflare';
 import { accountSeed } from './account-fixture.mjs';
 import { migrationStatements } from '../scripts/migration-statements.mjs';
+import {createVehicle,createMaintenance,updateMaintenance,deleteMaintenance,getVehicle} from '../src/api/vehicles/service.js';
+import {defaultHousehold,localPerson} from './account-fixture.mjs';
 
 test('Cloudflare runtime: migrations, shared writes, conflict checks, and persisted reads', async () => {
   const result = await build({ configFile: false, logLevel: 'silent', build: { write: false, lib: { entry: 'worker.js', formats: ['es'], fileName: 'worker' }, minify: false } });
@@ -13,7 +15,7 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', COZI_CALENDAR_URL:'https://rest.cozi.com/synthetic-private-feed' }, outboundService: async()=>new Response(readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8')), d1Databases: ['DB'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql', '0011_household_polls.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql', '0011_household_polls.sql', '0012_vehicles.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
       await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }
@@ -23,6 +25,15 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
       return { status: response.status, data: await response.json() };
     }
     assert.equal((await call('me')).status, 200);
+    // Exercise the unrouted Vehicles foundation against real D1 transaction semantics.
+    const vehicleUser={id:'local-development',account:{id:'local-account',role:'member'},person:{id:localPerson,first_name:'Local'},household:{id:defaultHousehold}};
+    const vehicle=await createVehicle(db,vehicleUser,defaultHousehold,{make:'Honda',model:'Accord',oil_filter_references:[{brand:'Wix',part_number:'123'}]});
+    const maintenance=await createMaintenance(db,vehicleUser,vehicle.id,1,{description:'Oil change',mileage:100,total_cost_cents:4999});
+    await updateMaintenance(db,vehicleUser,vehicle.id,maintenance.id,2,1,{performed_by:'Shop',mileage:120});
+    await assert.rejects(updateMaintenance(db,vehicleUser,vehicle.id,maintenance.id,3,1,{mileage:200}),e=>e.status===409);
+    assert.equal((await getVehicle(db,vehicleUser,vehicle.id)).version,3);
+    await deleteMaintenance(db,vehicleUser,vehicle.id,maintenance.id,3,2);
+    assert.equal((await getVehicle(db,vehicleUser,vehicle.id)).current_mileage,120);
     const pollRequest={id:crypto.randomUUID(),question:'Runtime poll',options:['Yes','No']};
     const poll=await call('polls','POST',pollRequest);assert.equal(poll.status,201,JSON.stringify(poll));
     assert.equal((await call('polls','POST',pollRequest)).status,200);

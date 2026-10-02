@@ -1,6 +1,6 @@
 # Vehicles requirements
 
-Status: product planning for a future feature; not implemented. This document records requirements, not authorization to implement or change production. See [Application boundaries](../ARCHITECTURE.md) for the current architecture.
+Status: Phase 1 Chunk 1 implements the additive data/domain and authorization foundation only. Vehicles has no routed API, UI, navigation or attachments yet. Later chunks require separate approval. See [Application boundaries](../ARCHITECTURE.md) for the current architecture.
 
 ## Purpose
 
@@ -44,7 +44,7 @@ Vehicle list and details:
 
 Each maintenance record supports:
 
-- Vehicle, date (default today), optional Category and description. Description remains the primary explanation of what was done; Category may be left blank.
+- Vehicle, date (default today), mileage, optional Category and description. Description remains the primary explanation of what was done; Category may be left blank.
 - When provided, Category must be one of: Oil & Filter; Tires; Brakes; Battery; Fluids; Engine; Transmission; Suspension/Steering; Electrical; HVAC; Body/Glass; Inspection; Other.
 - One editable **Performed by** text field. It defaults visually to the authenticated person's first name, but may be overwritten with a shop, another person's name or another useful label.
 - Total cost and notes.
@@ -151,3 +151,13 @@ These phases are planning guidance, not irrevocable implementation boundaries. D
 ## Later-phase decisions
 
 Implementation planning must still clarify maintenance schedule thresholds, fuel-calculation handling of partial fills, warranty start/status rules, reporting details and attachment/photo limits. Preserve later phases for schedules, fuel, permanent receipt/invoice OCR, Inventory, warranties and reporting without pulling them into Phase 1.
+
+## Phase 1 Chunk 1 implementation boundary
+
+- Migration `0012_vehicles.sql` adds `vehicles` and `vehicle_maintenance` only, without seeding or altering existing tables. Vehicle household is fixed on creation; household transfer is not implemented in this chunk.
+- Specification values that include units (oil capacity, pressures, wipers, socket size) remain readable text. Oil-filter references are a validated array of brand/part-number objects stored as JSON. Total cost is stored as integer cents; mileage is an optional nonnegative whole number.
+- `src/domain/vehicles.js` owns pure validation/defaults and monotonic mileage advancement. Dates default to today in America/Chicago. `src/api/vehicles/service.js` owns SQL scope, transactional persistence, driver validation and optimistic concurrency. It accepts trusted account-gate context, never an authenticated identity from a payload.
+- Explicit actions are `vehicle.read`, `vehicle.create`, `vehicle.update`, `vehicle.mileage.correct`, and `vehicle.maintenance.create/update/delete`. They require the same household. Administrator `vehicle.readAny` and `vehicle.correctAny` must be requested explicitly; corrections are transactionally audited and still enforce validation. Directory relationships grant no rights.
+- Vehicle and maintenance writes recheck active/bound account, active person and household scope in SQL. Primary driver assignment must reference an active person in the vehicle household. If that person later moves or becomes inactive, a subsequent vehicle save must clear/reassign the driver; Directory changes do not silently rewrite vehicle history.
+- Maintenance mutations require the current vehicle revision as well as the maintenance revision for edits/deletion. They advance last-known mileage only upward. Deletion retains a soft-deleted record and never lowers mileage. Manual lowering/clearing uses a separate, reason-required, audited correction. Vehicle deletion is not exposed.
+- Chunk 2 must add bounded/sanitized HTTP serialization and route integration behind the existing central account gate, then the approved compact UI. Display labels derive from year/make/model/trim. Refresh revisions after maintenance saves and surface stale-write conflicts. Retired-household records remain stored; this foundation operates only on active target households. No R2, attachment storage, schedules or notifications are included.

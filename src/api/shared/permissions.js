@@ -5,6 +5,15 @@ import {canEditDirectoryPerson} from '../../domain/directoryPermissions.js';
 export function can(user, action, resource = {}, context = {}) {
  if (!user) return false;
  switch (action) {
+  case 'vehicle.read':
+  case 'vehicle.create':
+  case 'vehicle.update':
+  case 'vehicle.mileage.correct':
+  case 'vehicle.maintenance.create':
+  case 'vehicle.maintenance.update':
+  case 'vehicle.maintenance.delete': return Boolean(user.account?.id && user.person?.id && user.household?.id && resource.household_id===user.household.id);
+  case 'vehicle.readAny':
+  case 'vehicle.correctAny': return Boolean(user.account?.id && user.person?.id && user.account.role==='administrator');
   case 'poll.create': return Boolean(user.account?.id && user.household?.id);
   case 'poll.read':
   case 'poll.respondOwn':

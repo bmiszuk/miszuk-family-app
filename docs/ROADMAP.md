@@ -19,7 +19,7 @@ Updated October 1, 2026 for Family Polls V1, following the September 30 audit of
 - **Grocery ordering investigation:** investigate transferring unchecked grocery items to ALDI/Instacart, Walmart and Costco using official APIs, deep links or other supported integration mechanisms. Investigation only; no retailer integration is implemented.
 - **Dinner/Calendar notifications:** scope useful events, recipients, timing and category preferences before implementation. Current push infrastructure is reusable; these triggers are not implemented. Calendar is read-only Cozi, so do not assume a local event-write trigger.
 - **Administrator-provisioned external invitations:** build on existing pending accounts; decide delivery/expiry/replay protection and coordinate Cloudflare admission separately. No public signup.
-- **Vehicles first phase:** can be selected for new app development without waiting for Photos; resolve ownership/permissions and attachment storage/limits first. Retain the phased plan below.
+- **Vehicles first phase:** Chunk 1 data/domain and explicit authorization foundation is complete, with additive migration 0012 applied. API/UI integration remains for the next separately approved chunk; attachment storage/limits must be settled before R2 work. Retain the phased plan below.
 - **Infrastructure handbook/inventory:** document actual home server, storage, backup, network and recovery arrangements. This is a prerequisite for Photos/self-hosting, not a blanket blocker for the other app candidates. See [handbook outline](infrastructure/HANDBOOK_OUTLINE.md).
 
 ## Later projects and phased expansion
@@ -71,7 +71,7 @@ The October 1, 2026 checkpoint is recorded in [Technical Health Review](TECHNICA
 These concrete items remain open; general health reviews do not replace or close them. Record evidence when an item is resolved.
 
 - **Operator handoff:** turn private helper locations and tested recovery artifacts into a successor-usable, secret-free runbook; document vault recovery and backup retention/restore ownership. Existing private artifacts alone are not a complete portable recovery process.
-- **Migration history:** reconciled October 1, 2026. The remote ledger now records 0001–0011 exactly once; 0004–0007 were recorded as bookkeeping only because their schema was already present. Preserve the private export/evidence and never replay those migrations.
+- **Migration history:** reconciled October 1, 2026; additive Vehicles migration 0012 followed. The remote ledger now records 0001–0012 exactly once; 0004–0007 were recorded as bookkeeping only because their schema was already present. Preserve the private export/evidence and never replay those migrations.
 - **Legacy data exposure review:** README records historical local database copies in Git. Verify repository access/history separately before any sharing or history cleanup; do not rewrite history as routine housekeeping.
 - **Notification operations:** retain documented delivery limits; decide ledger retention only if growth warrants it, preserving duplicate protection. Record real-device category results when available.
 - **Documentation discipline:** keep this roadmap as the status index and feature docs as detailed requirements/operations. Historical release checkpoints are not current rollback instructions. Update status with each scoped release rather than duplicating checklists across docs.

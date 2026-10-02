@@ -36,9 +36,15 @@ The Worker remains the authentication and application-account boundary for famil
 
 ## Deliberately deferred
 
-Invitations, Chat moderation, cross-household administration, Photos and Vehicles remain deferred. Current account roles/status are authoritative at the request boundary; revocation must not be implemented by deleting Directory people. Household query scope must accompany any future cross-household permission expansion; changing a UI button or a single boolean alone is insufficient.
+Invitations, Chat moderation, cross-household Grocery/Dinner administration and Photos remain deferred. Vehicles has the foundation described below but no exposed feature yet. Current account roles/status are authoritative at the request boundary; revocation must not be implemented by deleting Directory people. Household query scope must accompany any future cross-household permission expansion; changing a UI button or a single boolean alone is insufficient.
 
-Before or alongside Vehicles, define its own ownership/actions explicitly. Further splitting `domain/familyDisplay.js`, feature CSS extraction and coordinating duplicate polling can proceed separately when useful; none is required to add a feature handler. The legacy endpoints must be included in any future system-wide access/revocation rollout.
+Vehicles defines its own ownership/actions explicitly. Further splitting `domain/familyDisplay.js`, feature CSS extraction and coordinating duplicate polling can proceed separately when useful; none is required to add a feature handler. The legacy endpoints must be included in any future system-wide access/revocation rollout.
+
+## Vehicles Phase 1 — Chunk 1 foundation
+
+Migration `0012_vehicles.sql` adds vehicle specifications and versioned maintenance records with household/person/account references; no existing table is changed. `src/domain/vehicles.js` validates fields, the optional fixed category list and mileage behavior. `src/api/vehicles/service.js` owns household-scoped reads and transactional writes; it is not routed by the Worker yet. No frontend, R2, attachments or later-phase features are introduced.
+
+Shared policy names ordinary household actions explicitly. `vehicle.readAny` and `vehicle.correctAny` are separate Administrator actions, requested through deliberate administration mode and rechecked against live account/identity state in SQL. Cross-household corrections and manual mileage corrections write an audit in the same transaction. Administrator authority does not bypass driver validity, optimistic concurrency or other data constraints. Maintenance updates/deletion retain authenticated attribution and never lower last-known mileage. See [Vehicles requirements](docs/VEHICLES_REQUIREMENTS.md) for field conventions and the next integration boundary.
 
 ## Household Polls V1
 
