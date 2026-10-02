@@ -1,4 +1,5 @@
 import {DeleteButton} from '../../shared/ui/Shared.jsx';
+import {maintenanceDeletionConfirmation} from './maintenanceCopy.js';
 const mileage=value=>value===null?'—':new Intl.NumberFormat('en-US').format(value);
 const name=v=>[v.year,v.make,v.model,v.trim].filter(Boolean).join(' ');
 const date=day=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(new Date(day+'T12:00:00Z'));
@@ -12,5 +13,5 @@ export function VehicleDetails({vehicle,householdName,drivers,onEdit,onMileage,b
 export function MaintenanceRow({record,onEdit,onDelete,busy,attachments}){
  return <article className="maintenance-row"><div className="maintenance-row-heading"><strong>{record.description}</strong><span>{date(record.service_date)}</span></div><div className="maintenance-meta">
  {record.mileage!==null&&<span>{mileage(record.mileage)} mi</span>}{record.category&&<span>{record.category}</span>}{record.performed_by&&<span>{record.performed_by}</span>}{record.total_cost_cents!==null&&<span>{new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(record.total_cost_cents/100)}</span>}</div>
- {record.notes&&<p className="maintenance-notes">{record.notes}</p>}{attachments}<div className="maintenance-actions"><button className="quiet" disabled={busy} onClick={()=>onEdit(record)}>Edit</button><DeleteButton label={record.description} disabled={busy} onDelete={()=>onDelete(record)}/></div></article>;
+ {record.notes&&<p className="maintenance-notes">{record.notes}</p>}{attachments}<div className="maintenance-actions"><button className="quiet" disabled={busy} onClick={()=>onEdit(record)}>Edit</button><DeleteButton label={record.description} disabled={busy} confirmationMessage={maintenanceDeletionConfirmation(record.attachment_count)} onDelete={()=>onDelete(record)}/></div></article>;
 }

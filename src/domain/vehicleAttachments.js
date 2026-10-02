@@ -1,9 +1,25 @@
 export const attachmentLimit=5;
 export const attachmentMaxBytes=10_000_000;
 export const attachmentAccept='application/pdf,image/jpeg,image/png,image/heic,image/heif,.pdf,.jpg,.jpeg,.png,.heic,.heif';
-export function attachmentFilename(value){
+const filenameExtensions={
+ 'application/pdf':['.pdf'],
+ 'image/jpeg':['.jpg','.jpeg'],
+ 'image/png':['.png'],
+ 'image/heic':['.heic'],
+ 'image/heif':['.heif'],
+};
+export function attachmentFilename(value,type){
  if(typeof value!=='string')return '';
- return value.normalize('NFC').split(/[\\/]/).pop().replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu,'').trim().slice(0,180).toWellFormed();
+ const clean=value.normalize('NFC').split(/[\\/]/).pop().replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu,'').trim().toWellFormed();
+ if(!type||!filenameExtensions[type])return clean.slice(0,180);
+ const supported=filenameExtensions[type],dot=clean.lastIndexOf('.');
+ const suffix=dot>0?clean.slice(dot).toLowerCase():'';
+ let stem=suffix&&supported.includes(suffix)?clean.slice(0,dot):dot>0?clean.slice(0,dot):clean;
+ const extension=suffix&&supported.includes(suffix)?suffix:supported[0];
+ stem=stem.replace(/[. ]+$/u,'');
+ if(/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(stem))stem='_'+stem;
+ stem=stem.slice(0,180-extension.length).toWellFormed();
+ return `${stem||'attachment'}${extension}`;
 }
 // Validate the file signature as well as its supplied MIME type, never extension alone.
 export function attachmentType(bytes){

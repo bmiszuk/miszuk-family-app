@@ -9,7 +9,7 @@ function fields(body,allowed){if(Object.keys(body).some(key=>!allowed.includes(k
 function pick(row,keys){return Object.fromEntries(keys.map(key=>[key,row[key]]));}
 // Never serialize raw records or account/Cloudflare identifiers.
 export const publicVehicle=row=>pick(row,['id','household_id',...vehicleFields,'version']);
-export const publicMaintenance=row=>pick(row,['id',...maintenanceFields,'version','created_at','updated_at']);
+export const publicMaintenance=row=>pick(row,['id',...maintenanceFields,'version','created_at','updated_at','attachment_count']);
 function page(rows,offset,serialize){return {items:rows.slice(0,50).map(serialize),next_offset:rows.length>50?offset+50:null};}
 export async function handleVehicles(request,env,member){
  const url=new URL(request.url),parts=url.pathname.split('/').slice(3),id=parts[0],operation=parts[1],entryId=parts[2],method=request.method;

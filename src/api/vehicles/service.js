@@ -92,7 +92,7 @@ export async function correctVehicleMileage(db,user,id,version,mileage,reason,op
 }
 export async function listMaintenance(db,user,vehicleId,options={}){
  const {item,guard}=await vehicle(db,user,vehicleId,options);
- return (await db.prepare(`SELECT m.* FROM vehicle_maintenance m JOIN vehicles v ON v.id=m.vehicle_id
+ return (await db.prepare(`SELECT m.*,(SELECT count(*) FROM vehicle_attachments a WHERE a.maintenance_id=m.id) AS attachment_count FROM vehicle_maintenance m JOIN vehicles v ON v.id=m.vehicle_id
   WHERE v.id=? AND v.household_id=? AND m.deleted_at IS NULL AND ${guard.sql} ORDER BY m.service_date DESC,m.created_at DESC,m.id LIMIT 51 OFFSET ?`)
   .bind(vehicleId,item.household_id,...guard.args,options.offset||0).all()).results;
 }

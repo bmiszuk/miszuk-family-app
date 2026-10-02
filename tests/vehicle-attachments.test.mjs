@@ -67,6 +67,24 @@ test('Attachment file size/type validation measures the real stream; PDF/JPEG/PN
  const exact=new Uint8Array(attachmentMaxBytes);exact.set(pdf);assert.equal((await f.call(path,'POST',exact)).status,201);
  assert.equal(f.r2.objects.size,4);
 });
+test('Content-validated upload replaces dangerous/misleading filename extensions in stored and downloaded names',async t=>{
+ const f=await setup(t),path=f.base+'/attachments';
+ const uploaded=await f.call(path,'POST',pdf,{headers:{'X-Attachment-Filename':encodeURIComponent('Service receipt.CMD')}});
+ assert.equal(uploaded.status,201);assert.equal(uploaded.data.item.filename,'Service receipt.pdf');
+ const metadata=f.db.prepare('SELECT filename,content_type FROM vehicle_attachments WHERE id=?').get(uploaded.data.item.id);
+ assert.deepEqual({...metadata},{filename:'Service receipt.pdf',content_type:'application/pdf'});
+ const downloaded=await f.call(path+'/'+uploaded.data.item.id+'/file?download=true');
+ assert.match(downloaded.headers.get('Content-Disposition'),/filename="Service receipt\.pdf"/);
+ assert.match(downloaded.headers.get('Content-Disposition'),/filename\*=UTF-8''Service%20receipt\.pdf/);
+ assert.equal(f.r2.objects.size,1);
+});
+test('Maintenance history reports its attachment count for the delete confirmation without exposing storage keys',async t=>{
+ const f=await setup(t),m=(await f.request(f.base+'/maintenance','POST',{vehicle_version:1,description:'Receipt service'})).data;
+ const path=f.base+'/maintenance/'+m.id+'/attachments',rows=()=>f.request(f.base+'/maintenance');
+ let items=(await rows()).data.items;assert.equal(items[0].attachment_count,0);assert.ok(!('object_key' in items[0]));
+ assert.equal((await f.call(path,'POST',pdf)).status,201);
+ items=(await rows()).data.items;assert.equal(items[0].attachment_count,1);assert.ok(!('object_key' in items[0]));
+});
 test('Concurrent attachment reservations enforce five per parent, with independent vehicle/maintenance quotas',async t=>{
  const f=await setup(t),m=(await f.request(f.base+'/maintenance','POST',{vehicle_version:1,description:'Service'})).data;
  const statuses=(await Promise.all(Array.from({length:6},()=>f.call(f.base+'/attachments','POST',pdf)))).map(r=>r.status);
@@ -140,6 +158,14 @@ test('Interrupted uploads expire, and D1 cleanup acknowledgement failures preser
 });
 test('Filename handling rejects path/control tricks and HEIF recognition excludes AVIF',()=>{
  assert.equal(attachmentFilename('../../receipt\r\n.pdf'),'receipt.pdf');assert.equal(attachmentFilename('a'.repeat(200)).length,180);assert.ok(!attachmentDisposition('"résumé".pdf').includes('\r'));
+ assert.equal(attachmentFilename('Receipt.CMD','application/pdf'),'Receipt.pdf');
+ assert.equal(attachmentFilename('Photo.exe','image/jpeg'),'Photo.jpg');
+ assert.equal(attachmentFilename('Photo.JPEG','image/jpeg'),'Photo.jpeg');
+ assert.equal(attachmentFilename('Scan.txt','image/png'),'Scan.png');
+ assert.equal(attachmentFilename('Family.heic','image/heic'),'Family.heic');
+ assert.equal(attachmentFilename('Document.cmd','image/heif'),'Document.heif');
+ assert.equal(attachmentFilename('CON.exe','application/pdf'),'_CON.pdf');
+ assert.equal(attachmentFilename('a'.repeat(200)+'.cmd','application/pdf').length,180);
  assert.equal(attachmentType(new Uint8Array([0,0,0,20,102,116,121,112,109,105,102,49,0,0,0,0,97,118,105,102])),null);
  assert.equal(attachmentType(new Uint8Array([0,0,0,16,102,116,121,112,109,105,102,49,0,0,0,0])),'image/heif');
 });

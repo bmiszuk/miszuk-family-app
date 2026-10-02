@@ -7,8 +7,8 @@ import {join} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {sections} from '../src/app/navigation.js';
 const dir=await mkdtemp(join(tmpdir(),'vehicles-ui-')),root=process.cwd().replaceAll('\\','/');
-const output=await build({configFile:false,logLevel:'silent',plugins:[{name:'ui-test-entry',resolveId:id=>id==='vehicles-ui-entry'?id:null,load:id=>id==='vehicles-ui-entry'?`import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';import {VehicleForm,MaintenanceForm,MileageForm} from '${root}/src/features/vehicles/VehicleForms.jsx';import {VehicleRow,VehicleDetails,MaintenanceRow} from '${root}/src/features/vehicles/VehicleDetails.jsx';const render=(c,p)=>renderToStaticMarkup(React.createElement(c,p));export const forms={vehicle:p=>render(VehicleForm,p),maintenance:p=>render(MaintenanceForm,p),mileage:p=>render(MileageForm,p)};export const row=p=>render(VehicleRow,p);export const detail=p=>render(VehicleDetails,p);export const history=p=>render(MaintenanceRow,p);`:null}],build:{write:false,ssr:true,rollupOptions:{input:'vehicles-ui-entry'},minify:false},ssr:{noExternal:true}});
-const file=join(dir,'render.mjs');await writeFile(file,output.output.find(o=>o.type==='chunk'&&o.isEntry).code);const {forms,row,detail,history}=await import(pathToFileURL(file));await rm(dir,{recursive:true,force:true});
+const output=await build({configFile:false,logLevel:'silent',plugins:[{name:'ui-test-entry',resolveId:id=>id==='vehicles-ui-entry'?id:null,load:id=>id==='vehicles-ui-entry'?`import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';import {VehicleForm,MaintenanceForm,MileageForm} from '${root}/src/features/vehicles/VehicleForms.jsx';import {VehicleRow,VehicleDetails,MaintenanceRow} from '${root}/src/features/vehicles/VehicleDetails.jsx';import {maintenanceDeletionConfirmation} from '${root}/src/features/vehicles/maintenanceCopy.js';const render=(c,p)=>renderToStaticMarkup(React.createElement(c,p));export const forms={vehicle:p=>render(VehicleForm,p),maintenance:p=>render(MaintenanceForm,p),mileage:p=>render(MileageForm,p)};export const row=p=>render(VehicleRow,p);export const detail=p=>render(VehicleDetails,p);export const history=p=>render(MaintenanceRow,p);export {maintenanceDeletionConfirmation};`:null}],build:{write:false,ssr:true,rollupOptions:{input:'vehicles-ui-entry'},minify:false},ssr:{noExternal:true}});
+const file=join(dir,'render.mjs');await writeFile(file,output.output.find(o=>o.type==='chunk'&&o.isEntry).code);const {forms,row,detail,history,maintenanceDeletionConfirmation}=await import(pathToFileURL(file));await rm(dir,{recursive:true,force:true});
 const vehicle={id:'v',year:2017,make:'Toyota',model:'Camry',trim:'SE',status:'active',current_mileage:123456,oil_filter_references:[{brand:'Wix',part_number:'A'}],primary_driver_id:'p',vin:'ABC',notes:'Family car'};
 test('dense Vehicles row puts vehicle name and odometer together without Primary driver',()=>{
  const html=row({vehicle});assert.match(html,/2017 Toyota Camry SE/);assert.match(html,/123,456/);assert.match(html,/class="vehicle-row"/);assert.doesNotMatch(html,/Primary driver|Wix|Family car/);
@@ -31,6 +31,13 @@ test('maintenance history has compact description/metadata, edit and confirmed r
  const html=history({record:{id:'m',description:'<script>service</script>',service_date:'2026-10-01',mileage:1234,category:null,performed_by:'Jensen Tire',total_cost_cents:20000,notes:'Check again'}});
  assert.match(html,/&lt;script&gt;service/);assert.match(html,/1,234/);assert.match(html,/Jensen Tire/);assert.match(html,/\$200.00/);assert.match(html,/Edit/);assert.match(html,/Remove/);assert.doesNotMatch(html,/<script>|Created by|Subject/);
  assert.match(forms.mileage({vehicle}).match(/<input[^>]*name="reason"[^>]*>/)[0],/required/);assert.match(forms.mileage({vehicle}),/explicitly replaces/);
+});
+test('maintenance removal confirmation distinguishes permanently deleted attachments',async()=>{
+ assert.equal(maintenanceDeletionConfirmation(0),'Remove this entry?');
+ assert.equal(maintenanceDeletionConfirmation(1),'Remove entry? Attached files will be permanently deleted.');
+ assert.equal(maintenanceDeletionConfirmation(5),'Remove entry? Attached files will be permanently deleted.');
+ const details=await readFile(new URL('../src/features/vehicles/VehicleDetails.jsx',import.meta.url),'utf8');
+ assert.match(details,/confirmationMessage=\{maintenanceDeletionConfirmation\(record\.attachment_count\)\}/);
 });
 test('Vehicles is account-menu navigation only, with no Home card or permanent bottom item',async()=>{
  const app=await readFile(new URL('../src/app/App.jsx',import.meta.url),'utf8');assert.match(app,/href="#vehicles"/);assert.ok(!sections.some(s=>s.id==='vehicles'));

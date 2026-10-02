@@ -54,9 +54,10 @@ export async function handleAttachments(request,env,user,vehicleId,maintenanceId
  }
  if(!id&&method==='POST'){
   let supplied;try{supplied=decodeURIComponent(request.headers.get('X-Attachment-Filename')||'');}catch{throw new HttpError(400,'Invalid filename.');}
-  const filename=attachmentFilename(supplied);if(!filename)throw new HttpError(400,'A filename is required.');
+  const suppliedFilename=attachmentFilename(supplied);if(!suppliedFilename)throw new HttpError(400,'A filename is required.');
   const bytes=await bytesFrom(request),type=attachmentType(bytes),declared=request.headers.get('Content-Type')?.split(';')[0].toLowerCase();
   if(!type||(!['application/octet-stream',type].includes(declared)&&!(['image/heic','image/heif'].includes(type)&&['image/heic','image/heif'].includes(declared))))throw new HttpError(415,'Choose a PDF, JPEG, PNG or HEIC/HEIF file.');
+  const filename=attachmentFilename(suppliedFilename,type);
   const id=crypto.randomUUID(),key=prefix+crypto.randomUUID(),expires=new Date(Date.now()+15*60_000).toISOString();
   const statements=[];
   if(options.administration)statements.push(adminAudit(env,user,vehicleId,guard,'attachment.upload',id));
