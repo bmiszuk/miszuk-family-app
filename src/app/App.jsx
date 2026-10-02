@@ -2,6 +2,7 @@ import Polls from '../features/polls/Polls.jsx';
 import {PollNotice} from '../features/polls/PollHome.jsx';
 import {usePollSummary} from '../features/polls/usePollSummary.js';
 import Dinner from '../features/dinner/Dinner.jsx';
+import Vehicles from '../features/vehicles/Vehicles.jsx';
 import Notifications, {SignOut} from '../features/notifications/Notifications.jsx';
 import {registerWorker} from '../features/notifications/browser.js';
 import { useEffect, useState } from 'react';
@@ -42,7 +43,7 @@ export default function App() {
   return <div className="page">
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="hero"><div><h1><span className="brand-icon"><Icon name="home" /></span> Miszuk Family</h1></div>
-      {member && <details className="account-menu" key={section} onKeyDown={event=>{if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary').focus();}}}><summary>{member.person?.first_name.split(/\s+/)[0] || member.name} <span aria-hidden="true">▾</span></summary><div className="account-menu-items"><a href="#notifications" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Notifications</a>{!member.local && <SignOut userId={member.account.id} />}</div></details>}
+      {member && <details className="account-menu" key={section} onKeyDown={event=>{if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary').focus();}}}><summary>{member.person?.first_name.split(/\s+/)[0] || member.name} <span aria-hidden="true">▾</span></summary><div className="account-menu-items"><a href="#vehicles" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Vehicles</a><a href="#notifications" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Notifications</a>{!member.local && <SignOut userId={member.account.id} />}</div></details>}
     </header>
     {member && <nav className="section-nav app-nav" aria-label="Family sections">{sections.map(item => <a key={item.id} href={`#${item.id}`} aria-current={section === item.id ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></a>)}</nav>}
     <main id="main" tabIndex={-1}>
@@ -50,6 +51,7 @@ export default function App() {
         {member.household && <PollNotice key={member.account.id} visible={section!=='home'&&section!=='polls'} summary={polls}/>}
         {section === 'polls' && (member.household ? <Polls onChange={polls.refresh}/> : <NoHousehold/>)}
         {section === 'notifications' && <Notifications member={member} />}
+        {section === 'vehicles' && <Vehicles member={member} />}
         {section === 'home' && <Home member={member} polls={polls} />}
         {section === 'dinner' && (member.household ? <Dinner member={member} /> : <NoHousehold />)}
         {section === 'directory' && <Directory currentPersonId={member.person?.id} administrator={member.account?.role === 'administrator'} />}

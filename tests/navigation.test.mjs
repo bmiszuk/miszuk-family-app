@@ -4,6 +4,7 @@ import { sectionFromHash, nextEvent, latestNews } from '../src/app/navigation.js
 
 test('navigation supports direct section links and safe home fallback', () => {
   for (const id of ['home', 'groceries', 'calendar', 'chat', 'directory']) assert.equal(sectionFromHash(`#${id}`), id);
+  assert.equal(sectionFromHash('#vehicles'),'vehicles');
   assert.equal(sectionFromHash('#news'), 'chat');
   for (const hash of ['', '#main', '#unknown']) assert.equal(sectionFromHash(hash), 'home');
 });

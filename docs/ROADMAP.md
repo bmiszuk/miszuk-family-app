@@ -19,7 +19,7 @@ Updated October 1, 2026 for Family Polls V1, following the September 30 audit of
 - **Grocery ordering investigation:** investigate transferring unchecked grocery items to ALDI/Instacart, Walmart and Costco using official APIs, deep links or other supported integration mechanisms. Investigation only; no retailer integration is implemented.
 - **Dinner/Calendar notifications:** scope useful events, recipients, timing and category preferences before implementation. Current push infrastructure is reusable; these triggers are not implemented. Calendar is read-only Cozi, so do not assume a local event-write trigger.
 - **Administrator-provisioned external invitations:** build on existing pending accounts; decide delivery/expiry/replay protection and coordinate Cloudflare admission separately. No public signup.
-- **Vehicles first phase:** Chunk 1 data/domain and explicit authorization foundation is complete, with additive migration 0012 applied. API/UI integration remains for the next separately approved chunk; attachment storage/limits must be settled before R2 work. Retain the phased plan below.
+- **Vehicles first phase:** Chunks 1–2 data/domain, explicit authorization, scoped API and compact account-menu UI are complete, with migration 0012 applied. Attachments/R2 remain a separately approved chunk; storage/limits must be settled before that work. Retain the phased plan below.
 - **Infrastructure handbook/inventory:** document actual home server, storage, backup, network and recovery arrangements. This is a prerequisite for Photos/self-hosting, not a blanket blocker for the other app candidates. See [handbook outline](infrastructure/HANDBOOK_OUTLINE.md).
 
 ## Later projects and phased expansion

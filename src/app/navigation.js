@@ -12,6 +12,7 @@ export function sectionFromHash(hash) {
   if (id === 'polls') return 'polls';
   if (id === 'dinner') return 'dinner';
   if (id === 'notifications') return 'notifications';
+  if (id === 'vehicles') return 'vehicles';
   return sections.some(section => section.id === id) ? id : 'home';
 }
 export function nextEvent(events, now = new Date()) {

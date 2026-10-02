@@ -1,0 +1,16 @@
+import {DeleteButton} from '../../shared/ui/Shared.jsx';
+const mileage=value=>value===null?'—':new Intl.NumberFormat('en-US').format(value);
+const name=v=>[v.year,v.make,v.model,v.trim].filter(Boolean).join(' ');
+const date=day=>new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}).format(new Date(day+'T12:00:00Z'));
+const labels={vin:'VIN',license_plate:'Plate',purchase_date:'Purchased',purchase_mileage:'Purchase mileage',engine:'Engine',oil_specification:'Oil',oil_capacity:'Oil capacity',front_tire_size:'Front tires',rear_tire_size:'Rear tires',front_tire_pressure:'Front pressure',rear_tire_pressure:'Rear pressure',driver_wiper_size:'Driver wiper',passenger_wiper_size:'Passenger wiper',rear_wiper_size:'Rear wiper',lug_nut_socket_size:'Socket',notes:'Notes'};
+export function VehicleRow({vehicle,onSelect,busy}){return <button className="vehicle-row" disabled={busy} title={name(vehicle)} onClick={()=>onSelect(vehicle.id)}><span>{name(vehicle)}{vehicle.status==='sold_inactive'&&<small> · Sold / Inactive</small>}</span><strong>{mileage(vehicle.current_mileage)} <small>mi</small></strong></button>;}
+export function VehicleDetails({vehicle,householdName,drivers,onEdit,onMileage,busy}){
+ const driver=drivers.find(p=>p.id===vehicle.primary_driver_id);
+ return <details className="vehicle-specs"><summary>Vehicle details</summary><div className="vehicle-detail-actions"><button className="quiet" disabled={busy} onClick={onEdit}>Edit vehicle</button><button className="quiet" disabled={busy} onClick={onMileage}>Correct mileage</button></div>
+ <dl><div><dt>Status</dt><dd>{vehicle.status==='active'?'Active':'Sold / Inactive'}</dd></div>{householdName&&<div><dt>Household</dt><dd>{householdName}</dd></div>}{vehicle.primary_driver_id&&<div><dt>Primary driver</dt><dd>{driver?`${driver.first_name} ${driver.last_name||''}`.trim():'Reassign or clear previous driver'}</dd></div>}{Object.entries(labels).filter(([key])=>vehicle[key]!==null&&vehicle[key]!==undefined&&vehicle[key]!=='').map(([key,label])=><div key={key}><dt>{label}</dt><dd>{key==='purchase_mileage'?mileage(vehicle[key]):vehicle[key]}</dd></div>)}{vehicle.oil_filter_references.length>0&&<div><dt>Oil filters</dt><dd>{vehicle.oil_filter_references.map(f=>[f.brand,f.part_number].filter(Boolean).join(' ')).join(' · ')}</dd></div>}</dl></details>;
+}
+export function MaintenanceRow({record,onEdit,onDelete,busy}){
+ return <article className="maintenance-row"><div className="maintenance-row-heading"><strong>{record.description}</strong><span>{date(record.service_date)}</span></div><div className="maintenance-meta">
+ {record.mileage!==null&&<span>{mileage(record.mileage)} mi</span>}{record.category&&<span>{record.category}</span>}{record.performed_by&&<span>{record.performed_by}</span>}{record.total_cost_cents!==null&&<span>{new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(record.total_cost_cents/100)}</span>}</div>
+ {record.notes&&<p className="maintenance-notes">{record.notes}</p>}<div className="maintenance-actions"><button className="quiet" disabled={busy} onClick={()=>onEdit(record)}>Edit</button><DeleteButton label={record.description} disabled={busy} onDelete={()=>onDelete(record)}/></div></article>;
+}

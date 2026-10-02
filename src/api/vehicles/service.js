@@ -3,7 +3,7 @@ import {HttpError} from '../shared/errors.js';
 import {privilegedAudit} from '../shared/securityAudit.js';
 import {allowedFields,vehicleFields,maintenanceFields,vehicleValues,maintenanceValues,VehicleValidationError,advanceMileage} from '../../domain/vehicles.js';
 
-// Internal feature service, not routed yet. Pass only account-gate request context.
+// Pass only account-gate request context.
 // Cross-household access is deliberate: callers must request administration mode.
 function scope(user,household,action,administration=false){
  if(!household)throw new HttpError(403,'No household assigned. Contact Bob.','HOUSEHOLD_REQUIRED');
@@ -48,7 +48,11 @@ function audit(db,user,item,guard,action,details={}){
 }
 export async function listVehicles(db,user,household,options={}){
  const guard=scope(user,household,'vehicle.read',options.administration);
- return (await db.prepare(`SELECT * FROM vehicles WHERE household_id=? AND ${guard.sql} ORDER BY status,make,model,id`).bind(household,...guard.args).all()).results.map(decode);
+ return (await db.prepare(`SELECT * FROM vehicles WHERE household_id=? AND ${guard.sql} ORDER BY status,make,model,id LIMIT 51 OFFSET ?`).bind(household,...guard.args,options.offset||0).all()).results.map(decode);
+}
+export async function vehicleDrivers(db,user,household,options={}){
+ const guard=scope(user,household,'vehicle.read',options.administration);
+ return (await db.prepare(`SELECT id,first_name,last_name FROM people WHERE household_id=? AND deleted_at IS NULL AND ${guard.sql} ORDER BY first_name,last_name,id`).bind(household,...guard.args).all()).results;
 }
 export async function getVehicle(db,user,id,options={}){return (await vehicle(db,user,id,options)).item;}
 export async function createVehicle(db,user,household,input,options={}){
@@ -89,8 +93,8 @@ export async function correctVehicleMileage(db,user,id,version,mileage,reason,op
 export async function listMaintenance(db,user,vehicleId,options={}){
  const {item,guard}=await vehicle(db,user,vehicleId,options);
  return (await db.prepare(`SELECT m.* FROM vehicle_maintenance m JOIN vehicles v ON v.id=m.vehicle_id
-  WHERE v.id=? AND v.household_id=? AND m.deleted_at IS NULL AND ${guard.sql} ORDER BY m.service_date DESC,m.created_at DESC,m.id`)
-  .bind(vehicleId,item.household_id,...guard.args).all()).results;
+  WHERE v.id=? AND v.household_id=? AND m.deleted_at IS NULL AND ${guard.sql} ORDER BY m.service_date DESC,m.created_at DESC,m.id LIMIT 51 OFFSET ?`)
+  .bind(vehicleId,item.household_id,...guard.args,options.offset||0).all()).results;
 }
 export async function createMaintenance(db,user,vehicleId,vehicleVersion,input,options={}){
  revision(vehicleVersion);const {item,guard}=await vehicle(db,user,vehicleId,options,'vehicle.maintenance.create');

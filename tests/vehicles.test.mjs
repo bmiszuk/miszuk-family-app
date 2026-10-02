@@ -9,7 +9,7 @@ import {createVehicle,getVehicle,listVehicles,updateVehicle,correctVehicleMileag
 const migration=readFileSync(new URL('../migrations/0012_vehicles.sql',import.meta.url),'utf8');
 const input={year:2018,make:'Honda',model:'Accord'};
 function setup(t){
- const f=fixture(t);f.db.exec(migration);
+ const f=fixture(t);
  // D1 serializes transactions; match it for concurrent synthetic requests.
  const batch=f.DB.batch.bind(f.DB);let queue=Promise.resolve();
  f.DB.batch=statements=>{const result=queue.then(()=>batch(statements));queue=result.catch(()=>{});return result;};
@@ -26,7 +26,8 @@ function setup(t){
 const rejects=(promise,status)=>assert.rejects(promise,e=>e.status===status);
 
 test('Vehicles migration is additive on existing data, has restrictive references and constrained categories/status/mileage',async t=>{
- const f=fixture(t),tables=f.db.prepare("SELECT name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY name").all();
+ const f=fixture(t);f.db.exec('DROP TRIGGER vehicle_driver_insert; DROP TRIGGER vehicle_driver_update; DROP TABLE vehicle_maintenance; DROP TABLE vehicles');
+ const tables=f.db.prepare("SELECT name,sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' ORDER BY name").all();
  const rows=Object.fromEntries(tables.filter(x=>x.sql?.startsWith('CREATE TABLE')).map(x=>[x.name,f.db.prepare('SELECT * FROM "'+x.name+'"').all()]));
  f.db.exec(migration);
  for(const entry of tables)assert.equal(f.db.prepare('SELECT sql FROM sqlite_schema WHERE name=?').get(entry.name).sql,entry.sql);
@@ -155,14 +156,14 @@ test('Audit failure rolls back Administrator correction and explicit Member mile
  assert.equal(f.db.prepare('SELECT version FROM vehicles').get().version,1);assert.equal(f.db.prepare('SELECT count(*) n FROM vehicle_maintenance').get().n,0);
 });
 
-test('Inactive targets and accounts never gain access, and no Vehicles API is exposed in Chunk 1',async t=>{
+test('Inactive targets and accounts never gain access through the Vehicles API',async t=>{
  const f=setup(t),v=await createVehicle(f.DB,f.user,defaultHousehold,input);
  f.db.exec("UPDATE app_users SET status='pending' WHERE id='peer'");assert.deepEqual(await listVehicles(f.DB,f.peer,defaultHousehold),[]);await rejects(getVehicle(f.DB,f.peer,v.id),403);
  f.db.exec("UPDATE app_users SET status='disabled' WHERE id='peer'");await rejects(createVehicle(f.DB,f.peer,defaultHousehold,input),409);
  f.db.exec("DROP TRIGGER household_delete_members; UPDATE households SET deleted_at='inactive' WHERE id='"+defaultHousehold+"'");
  await rejects(getVehicle(f.DB,f.admin,v.id,{administration:true}),403);
- // Central Worker account gate still runs before the absent route.
- assert.equal((await f.request('/api/vehicles')).status,404);
+ // The account gate and household policy remain authoritative on the routed feature.
+ assert.equal((await f.request('/api/vehicles')).status,403);
  f.db.exec("UPDATE app_users SET status='disabled' WHERE id='local-account'");
  assert.equal((await f.request('/api/vehicles')).status,403);
 });
