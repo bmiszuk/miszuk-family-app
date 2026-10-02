@@ -1,6 +1,6 @@
 # Vehicles requirements
 
-Status: Phase 1 Chunks 1–2 implement the data/domain foundation, scoped API and compact core UI. Vehicles is available through the account menu. Attachments/R2 and later phases are not implemented and require separate approval. See [Application boundaries](../ARCHITECTURE.md) for the current architecture.
+Status: Phase 1 Chunks 1–2 implement the data/domain foundation, scoped API and compact core UI. Vehicles is available through the account menu. Attachment support is specified below but R2 implementation remains a separately approved chunk. See [Application boundaries](../ARCHITECTURE.md) for the current architecture.
 
 ## Purpose
 
@@ -31,7 +31,7 @@ Phase 1 vehicle record supports:
 - Front/rear tire sizes and recommended pressures.
 - Driver, passenger and rear windshield-wiper sizes.
 - Lug-nut/socket size.
-- Optional simple attachments such as a photo or PDF only where the existing attachment infrastructure makes permanent vehicle photos essentially trivial. No vehicle-photo/gallery feature is required in Phase 1.
+- Attachments follow the finalized Phase 1 attachment decisions below. Vehicle attachments are useful documents or occasional photos; they do not form a vehicle photo gallery.
 
 Vehicle list and details:
 
@@ -48,7 +48,7 @@ Each maintenance record supports:
 - When provided, Category must be one of: Oil & Filter; Tires; Brakes; Battery; Fluids; Engine; Transmission; Suspension/Steering; Electrical; HVAC; Body/Glass; Inspection; Other.
 - One editable **Performed by** text field. It defaults visually to the authenticated person's first name, but may be overwritten with a shop, another person's name or another useful label.
 - Total cost and notes.
-- Optional attachments such as receipt/invoice photos, other images or PDFs.
+- Optional attachments such as receipt/invoice photos, other images or PDFs, subject to the finalized Phase 1 attachment decisions below.
 
 The authenticated account that actually creates or updates the record is stored separately as system metadata. It is not inferred from the editable Performed by text. Do not create separate DIY/shop/dealer controls in Phase 1, and do not implement parts or supply line items; total cost is sufficient. Preserve parts and inventory concepts for later phases.
 
@@ -146,11 +146,21 @@ These phases are planning guidance, not irrevocable implementation boundaries. D
 - Phase 1 is account-menu access, with no Home card and no permanent bottom-navigation item.
 - Phase 1 maintenance uses an editable Performed by text field plus separate authenticated system metadata; no parts line items, OCR, or provider/DIY controls.
 - Phase 1 Category is optional and limited to the fixed list above; Description remains primary.
-- Phase 1 attachment UI is simple and may include receipt/invoice images and PDFs; binaries use R2 and metadata uses D1.
+- Phase 1 attachment UI is simple and may include receipt/invoice images and PDFs; binaries use R2 and metadata uses D1. The finalized attachment rules are specified below.
 
 ## Later-phase decisions
 
-Implementation planning must still clarify maintenance schedule thresholds, fuel-calculation handling of partial fills, warranty start/status rules, reporting details and attachment/photo limits. Preserve later phases for schedules, fuel, permanent receipt/invoice OCR, Inventory, warranties and reporting without pulling them into Phase 1.
+Implementation planning must still clarify maintenance schedule thresholds, fuel-calculation handling of partial fills and warranty start/status rules. Preserve later phases for schedules, fuel, permanent receipt/invoice OCR, Inventory, warranties and reporting without pulling them into Phase 1.
+
+## Finalized Phase 1 attachment decisions
+
+- Attachments are supported on both vehicle records and maintenance records through one underlying attachment mechanism. Vehicle-level attachments are for useful documents such as registration/specification documents or occasional photos; do not build a vehicle photo gallery.
+- Each vehicle or maintenance record may have at most 5 attachments. Each attachment is at most 10 MB.
+- Accept PDF and common iPhone/browser image formats. JPEG and PNG are required; support HEIC where practical through the existing browser/upload path, without introducing image-conversion infrastructure solely for HEIC.
+- Attachment authorization inherits the associated vehicle's explicit Vehicle authorization. Users who may view the vehicle may view/download its attachments; users authorized to maintain the vehicle may add/delete attachments. Administrator cross-household access remains explicit and Vehicle-specific.
+- Binary objects live in Cloudflare R2; D1 stores attachment metadata and parent relationships. Attachments live for the lifetime of their parent record. Deleting a maintenance record also removes its associated R2 objects and D1 metadata. There is no recycle bin or attachment version history in Phase 1. Vehicle Sold/Inactive status does not delete attachments.
+- Phase 1 does not include OCR, tagging, folders, gallery behavior, document categories or other document-management functionality. Permanent vehicle photos are not a separate feature.
+- Before R2 becomes production infrastructure, documentation must identify the bucket, Worker binding, object-key strategy, access/security model, deletion/retention behavior and recovery expectations. Vehicles Phase 1 does not create a separate R2 backup system; the implementation documentation must state whether R2 objects have any independent backup/recovery mechanism so that limitation is explicit.
 
 ## Phase 1 Chunk 1 implementation boundary
 
@@ -168,4 +178,4 @@ Implementation planning must still clarify maintenance schedule thresholds, fuel
 - Members always use their account-linked household. Explicit `administration=true` permits an Administrator to select an active household via `household_id`; every operation still enforces the Vehicle-specific policy and transaction guards. Ordinary payloads cannot override household, account or attribution. Driver options contain only active people in that authorized household.
 - Account-menu navigation opens the dense vehicle list and maintenance history. Details/edit forms contain the documented specifications; household is read-only after creation. Maintenance defaults date to Chicago today and Performed by to the signed-in person's first name, without separate provider/DIY controls. Category, mileage, cost and notes are optional. Cost is entered as currency and stored as integer cents. Deletion has a cancellable confirmation and retains system history.
 - No schema or configuration change is required for Chunk 2. Preserve a private restore-verified D1 export and the pre-Chunk-2 Git checkpoint before deployment. Code rollback uses that account-aware predecessor, retaining migration 0012 and all vehicle/maintenance data; do not restore an older database or roll back to legacy account resolution. The existing fail-closed account recovery release remains an operator fallback.
-- Before the attachment chunk, settle file types/size/count limits, R2 authorization, retention/deletion, costs and backup/recovery. Do not add attachment fields or storage merely to reserve them.
+- Before the attachment chunk, document the production bucket, Worker binding, object-key strategy, access/security model, deletion/retention behavior and recovery expectations. Confirm the independent R2 backup/recovery limitation before deployment. Do not add attachment fields or storage merely to reserve them.
