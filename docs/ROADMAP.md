@@ -11,6 +11,7 @@ Updated October 1, 2026 for Family Polls V1, following the September 30 audit of
 - **Birthday and Family Chat categories:** deployed at `4d3b89c`, with independent account-wide opt-outs, privacy-safe payloads and duplicate prevention. See [notification operations](NOTIFICATIONS.md). Deployment is complete; the two real-device category checks below remain open.
 
 - **Family Polls V1:** household recipient snapshots, single-choice answers, seven-day expiry/early close, named results/history, compact Home discovery and new-poll push with default-On preference. See [requirements and operations](POLLS_REQUIREMENTS.md). Physical-device delivery/tap acceptance remains open.
+- **Vehicles Phase 1:** Chunks 1–3 complete: data/domain and explicit household authorization, compact account-menu API/UI, and shared private R2 vehicle/maintenance attachments. Migrations 0012–0013 are applied; attachment production release `b8db621` is verified. Physical-iPhone picker/HEIC and Safari PDF-preview acceptance remain device checks. See [storage/recovery evidence](VEHICLES_REQUIREMENTS.md#phase-1-chunk-3-attachments-and-operations); binaries have no independent backup. Later Vehicles phases are separate projects.
 
 ## Near-term candidates — no project selected
 
@@ -19,7 +20,6 @@ Updated October 1, 2026 for Family Polls V1, following the September 30 audit of
 - **Grocery ordering investigation:** investigate transferring unchecked grocery items to ALDI/Instacart, Walmart and Costco using official APIs, deep links or other supported integration mechanisms. Investigation only; no retailer integration is implemented.
 - **Dinner/Calendar notifications:** scope useful events, recipients, timing and category preferences before implementation. Current push infrastructure is reusable; these triggers are not implemented. Calendar is read-only Cozi, so do not assume a local event-write trigger.
 - **Administrator-provisioned external invitations:** build on existing pending accounts; decide delivery/expiry/replay protection and coordinate Cloudflare admission separately. No public signup.
-- **Vehicles first phase:** Chunks 1–2 data/domain, explicit authorization, scoped API and compact account-menu UI are complete, with migration 0012 applied. Chunk 3 implements shared private vehicle/maintenance attachments; production activation awaits R2 account activation, migration 0013 and deployment. See [storage/recovery boundary](VEHICLES_REQUIREMENTS.md#phase-1-chunk-3-attachments-and-operations). Retain the phased plan below; do not start later phases implicitly.
 - **Infrastructure handbook/inventory:** document actual home server, storage, backup, network and recovery arrangements. This is a prerequisite for Photos/self-hosting, not a blanket blocker for the other app candidates. See [handbook outline](infrastructure/HANDBOOK_OUTLINE.md).
 
 ## Later projects and phased expansion
@@ -34,7 +34,7 @@ Do not install or expose Photos until its prerequisites are verified. The WD Red
 
 Follow [Vehicles requirements](VEHICLES_REQUIREMENTS.md); do not duplicate or prematurely resolve its open decisions. Planned phases:
 
-1. Vehicles, specifications, maintenance history, permanent documents/photos.
+1. Vehicles, specifications, maintenance history, permanent documents/photos — complete; see the device acceptance checks above.
 2. Maintenance schedules/reminders.
 3. Fuel tracking and temporary fuel-photo OCR.
 4. Permanent receipt/invoice recognition with user review.
@@ -71,7 +71,7 @@ The October 1, 2026 checkpoint is recorded in [Technical Health Review](TECHNICA
 These concrete items remain open; general health reviews do not replace or close them. Record evidence when an item is resolved.
 
 - **Operator handoff:** turn private helper locations and tested recovery artifacts into a successor-usable, secret-free runbook; document vault recovery and backup retention/restore ownership. Existing private artifacts alone are not a complete portable recovery process.
-- **Migration history:** reconciled October 1, 2026; additive Vehicles migration 0012 followed. The remote ledger now records 0001–0012 exactly once; 0004–0007 were recorded as bookkeeping only because their schema was already present. Preserve the private export/evidence and never replay those migrations.
+- **Migration history:** reconciled October 1, 2026; additive Vehicles migrations 0012–0013 followed. The remote ledger now records 0001–0013 exactly once; 0004–0007 were recorded as bookkeeping only because their schema was already present. Preserve the private export/evidence and never replay those migrations.
 - **Legacy data exposure review:** README records historical local database copies in Git. Verify repository access/history separately before any sharing or history cleanup; do not rewrite history as routine housekeeping.
 - **Notification operations:** retain documented delivery limits; decide ledger retention only if growth warrants it, preserving duplicate protection. Record real-device category results when available.
 - **Documentation discipline:** keep this roadmap as the status index and feature docs as detailed requirements/operations. Historical release checkpoints are not current rollback instructions. Update status with each scoped release rather than duplicating checklists across docs.
