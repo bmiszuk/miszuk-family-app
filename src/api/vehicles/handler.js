@@ -3,6 +3,7 @@ import {jsonResponse,isUuid} from '../shared/utils.js';
 import {can} from '../shared/permissions.js';
 import {vehicleFields,maintenanceFields} from '../../domain/vehicles.js';
 import {createVehicle,getVehicle,listVehicles,updateVehicle,correctVehicleMileage,vehicleDrivers,createMaintenance,listMaintenance,updateMaintenance,deleteMaintenance} from './service.js';
+import {handleAttachments,cleanupMaintenanceAttachments} from './attachments.js';
 
 function fields(body,allowed){if(Object.keys(body).some(key=>!allowed.includes(key)))throw new HttpError(400,'Unsupported vehicle fields.');}
 function pick(row,keys){return Object.fromEntries(keys.map(key=>[key,row[key]]));}
@@ -25,6 +26,11 @@ export async function handleVehicles(request,env,member){
  const offset=Number(url.searchParams.get('offset')||0);
  if(!Number.isSafeInteger(offset)||offset<0||offset>100000)throw new HttpError(400,'Invalid page.');
  const options={administration,offset},db=env.DB;
+ const attachmentAt=operation==='attachments'?1:operation==='maintenance'&&parts[3]==='attachments'?3:-1;
+ if(attachmentAt!==-1){
+  if(!isUuid(id)||(attachmentAt===3&&!isUuid(entryId)))throw new HttpError(404,'Attachment parent not found.');
+  return handleAttachments(request,env,member,id,attachmentAt===3?entryId:null,parts.slice(attachmentAt+1),options);
+ }
  if(parts.length>3)throw new HttpError(404,'Vehicle not found.');
  if(method==='GET'&&id==='people'&&!operation){
   return jsonResponse({items:await vehicleDrivers(db,member,household,options)});
@@ -62,7 +68,10 @@ export async function handleVehicles(request,env,member){
    }
    if(method==='DELETE'){
     const body=await bodyJson(request);fields(body,['vehicle_version','version']);
-    return jsonResponse(await deleteMaintenance(db,member,id,entryId,body.vehicle_version,body.version,options));
+    const result=await deleteMaintenance(db,member,id,entryId,body.vehicle_version,body.version,options);
+    let pending;
+    try{pending=(await cleanupMaintenanceAttachments(env)).pending;}catch{pending=true;console.warn('vehicle-attachments parent cleanup pending');}
+    return jsonResponse({...result,cleanup_pending:pending});
    }
   }else throw new HttpError(404,'Maintenance record not found.');
  }

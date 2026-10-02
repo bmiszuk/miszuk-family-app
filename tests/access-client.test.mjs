@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {api,onAccessFailure} from '../src/shared/client.js';
+test('attachment Blob uploads preserve raw bytes and explicit MIME/filename without changing JSON requests',async t=>{
+ const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});const requests=[];
+ globalThis.fetch=async(url,options)=>{requests.push({url,options});return new Response('{}',{headers:{'Content-Type':'application/json'}});};
+ const file=new Blob(['%PDF-1.7'],{type:'application/pdf'});
+ await api('vehicles/id/attachments',{method:'POST',headers:{'Content-Type':file.type,'X-Attachment-Filename':'Receipt.pdf'},body:file});
+ assert.equal(requests[0].options.body,file);assert.equal(requests[0].options.headers['Content-Type'],'application/pdf');assert.equal(requests[0].options.credentials,'same-origin');assert.equal(requests[0].options.cache,'no-store');
+ await api('vehicles',{method:'POST',body:{make:'Toyota'}});assert.equal(requests[1].options.body,'{"make":"Toyota"}');
+});
 test('access errors revoke sessions, feature denials do not, and late successful responses are ignored',async t=>{
  const original=globalThis.fetch;t.after(()=>{globalThis.fetch=original;});
  const errors=[];const unsubscribe=onAccessFailure(e=>errors.push(e));t.after(unsubscribe);

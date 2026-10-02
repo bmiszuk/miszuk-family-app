@@ -20,14 +20,14 @@ function validate(fn){try{return fn();}catch(error){if(error instanceof VehicleV
 function revision(value){if(!Number.isSafeInteger(value)||value<1)throw new HttpError(400,'Current revision required.');}
 function decode(row){return row?{...row,oil_filter_references:JSON.parse(row.oil_filter_references)}:null;}
 function values(row){return Object.fromEntries(Object.entries(row).map(([key,value])=>[key,key==='oil_filter_references'?JSON.stringify(value):value]));}
-async function transaction(db,statements){
+export async function transaction(db,statements){
  try {const results=await db.batch(statements);if(results.some(r=>!r.meta.changes))throw new HttpError(409,'Vehicle record changed. Refresh and try again.');}
  catch(error){
   if(/NOT NULL constraint failed|CHECK constraint failed|UNIQUE constraint failed|vehicles:/.test(String(error.message)))throw new HttpError(409,'Vehicle, driver or access changed. Refresh and try again.');
   throw error;
  }
 }
-async function vehicle(db,user,id,options={},action='vehicle.read'){
+export async function vehicle(db,user,id,options={},action='vehicle.read'){
  // Discover only the household identifier, never return an unscoped family record.
  const target=await db.prepare('SELECT household_id FROM vehicles WHERE id=?').bind(id).first();
  if(!target)throw new HttpError(404,'Vehicle not found.');

@@ -19,7 +19,7 @@ Updated October 1, 2026 for Family Polls V1, following the September 30 audit of
 - **Grocery ordering investigation:** investigate transferring unchecked grocery items to ALDI/Instacart, Walmart and Costco using official APIs, deep links or other supported integration mechanisms. Investigation only; no retailer integration is implemented.
 - **Dinner/Calendar notifications:** scope useful events, recipients, timing and category preferences before implementation. Current push infrastructure is reusable; these triggers are not implemented. Calendar is read-only Cozi, so do not assume a local event-write trigger.
 - **Administrator-provisioned external invitations:** build on existing pending accounts; decide delivery/expiry/replay protection and coordinate Cloudflare admission separately. No public signup.
-- **Vehicles first phase:** Chunks 1–2 data/domain, explicit authorization, scoped API and compact account-menu UI are complete, with migration 0012 applied. Attachments/R2 remain a separately approved chunk; storage/limits must be settled before that work. Retain the phased plan below.
+- **Vehicles first phase:** Chunks 1–2 data/domain, explicit authorization, scoped API and compact account-menu UI are complete, with migration 0012 applied. Chunk 3 implements shared private vehicle/maintenance attachments; production activation awaits R2 account activation, migration 0013 and deployment. See [storage/recovery boundary](VEHICLES_REQUIREMENTS.md#phase-1-chunk-3-attachments-and-operations). Retain the phased plan below; do not start later phases implicitly.
 - **Infrastructure handbook/inventory:** document actual home server, storage, backup, network and recovery arrangements. This is a prerequisite for Photos/self-hosting, not a blanket blocker for the other app candidates. See [handbook outline](infrastructure/HANDBOOK_OUTLINE.md).
 
 ## Later projects and phased expansion
@@ -42,7 +42,7 @@ Follow [Vehicles requirements](VEHICLES_REQUIREMENTS.md); do not duplicate or pr
 6. Warranties.
 7. Reporting/refinements: costs, MPG, fuel costs, inventory value, upcoming maintenance, warranties, history and export.
 
-Vehicle permissions must be explicit; neither Directory relationships nor household Grocery access defines them. R2 attachment storage is planned, not deployed. Phases remain revisable.
+Vehicle permissions must be explicit; neither Directory relationships nor household Grocery access defines them. Private R2 attachments follow the Chunk 3 operations above, with no independent binary backup. Phases remain revisable.
 
 ### Other preserved ideas
 

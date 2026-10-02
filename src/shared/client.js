@@ -18,7 +18,7 @@ export async function api(path, options = {}) {
     response = await fetch(`/api/${path}`, {
       credentials: 'same-origin', cache: 'no-store', ...options,
       headers: { 'Content-Type': 'application/json', ...options.headers },
-      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.body === undefined ? {} : { body: options.body instanceof Blob ? options.body : JSON.stringify(options.body) }),
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;

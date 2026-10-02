@@ -19,6 +19,7 @@ const mf = new Miniflare({
   modules: true, script, host: '127.0.0.1', port: 5173, compatibilityDate: '2026-07-05',
   bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', ...(sample ? {COZI_CALENDAR_URL:'https://rest.cozi.com/local-sample-only'} : {}) },
   ...(sample ? {outboundService: async()=>new Response(sample,{headers:{'Content-Type':'text/calendar'}})} : {}), d1Databases: ['DB'], d1Persist: resolve(root, '.wrangler/portable-state'),
+  r2Buckets:['VEHICLE_ATTACHMENTS'],r2Persist:resolve(root,'.wrangler/portable-r2'),
   serviceBindings: { ASSETS: async request => {
     let path;
     try { path = decodeURIComponent(new URL(request.url).pathname); } catch { return new Response('Invalid path', { status: 400 }); }

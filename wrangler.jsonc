@@ -24,6 +24,7 @@
       "/api/*"
     ]
   },
+  "r2_buckets": [{"binding":"VEHICLE_ATTACHMENTS","bucket_name":"miszuk-family-vehicle-attachments"}],
   "d1_databases": [
     {
       "binding": "DB",

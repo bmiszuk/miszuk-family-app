@@ -4,12 +4,13 @@ import { authenticate, checkOrigin } from './src/api/shared/auth.js';
 import { HttpError } from './src/api/shared/errors.js';
 import { jsonResponse } from './src/api/shared/utils.js';
 import {runBirthdays} from './src/api/notifications/events.js';
+import {runAttachmentCleanup} from './src/api/vehicles/attachments.js';
 
 const handleApiRequest = createApiRouter();
 
 export default {
   async scheduled(controller, env) {
-    await runBirthdays(env,controller.scheduledTime);
+    await Promise.all([runBirthdays(env,controller.scheduledTime),runAttachmentCleanup(env)]);
   },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);

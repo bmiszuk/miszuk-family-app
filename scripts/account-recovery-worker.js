@@ -3,7 +3,8 @@ import {authenticate,checkOrigin} from '../src/api/shared/auth.js';
 import {requireAccount} from '../src/api/shared/accountGate.js';
 import {HttpError} from '../src/api/shared/errors.js';
 import {jsonResponse} from '../src/api/shared/utils.js';
-export default {async fetch(request,env) {
+import {runAttachmentCleanup} from '../src/api/vehicles/attachments.js';
+export default {async scheduled(controller,env){await runAttachmentCleanup(env);},async fetch(request,env) {
  if(new URL(request.url).pathname.startsWith('/api/')) {
   try {const identity=await authenticate(request,env);checkOrigin(request,env);await requireAccount(env,identity);}
   catch(error) {return jsonResponse({error:'Application access is unavailable.',code:error.code || (error.status===401?'AUTHENTICATION_REQUIRED':'APPLICATION_ACCESS_UNAVAILABLE')},error instanceof HttpError?error.status:503);}

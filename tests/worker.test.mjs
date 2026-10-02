@@ -12,10 +12,10 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
   const result = await build({ configFile: false, logLevel: 'silent', build: { write: false, lib: { entry: 'worker.js', formats: ['es'], fileName: 'worker' }, minify: false } });
   const output = Array.isArray(result) ? result[0] : result;
   const script = output.output.find(chunk => chunk.type === 'chunk' && chunk.isEntry).code;
-  const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', COZI_CALENDAR_URL:'https://rest.cozi.com/synthetic-private-feed' }, outboundService: async()=>new Response(readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8')), d1Databases: ['DB'] });
+  const mf = new Miniflare({ modules: true, script, compatibilityDate: '2026-07-05', bindings: { LOCAL_DEV: 'true', ACCESS_TEAM_DOMAIN:'test.cloudflareaccess.com', COZI_CALENDAR_URL:'https://rest.cozi.com/synthetic-private-feed' }, outboundService: async()=>new Response(readFileSync(new URL('./fixtures/cozi-sample.ics',import.meta.url),'utf8')), d1Databases: ['DB'],r2Buckets:['VEHICLE_ATTACHMENTS'] });
   try {
     const db = await mf.getD1Database('DB');
-    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql', '0011_household_polls.sql', '0012_vehicles.sql']) {
+    for (const name of ['0001_initial_schema.sql', '0002_household_portal.sql', '0003_family_directory.sql', '0004_chat_requester.sql', '0005_login_identity.sql', '0006_households_dinner.sql', '0007_household_retirement.sql', '0008_application_accounts.sql', '0009_push_notifications.sql', '0010_notification_deliveries.sql', '0011_household_polls.sql', '0012_vehicles.sql','0013_vehicle_attachments.sql']) {
       const sql = readFileSync(new URL(`../migrations/${name}`, import.meta.url), 'utf8').replace(/--[^\n]*/g, '');
       await db.batch(migrationStatements(sql).map(value => db.prepare(value)));
     }
@@ -38,6 +38,13 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     assert.equal((await call('vehicles/'+vehicle.id+'/maintenance','POST',{vehicle_version:4,description:'Runtime API service',mileage:140})).status,201);
     const vehicleHistory=await call('vehicles/'+vehicle.id+'/maintenance');assert.equal(vehicleHistory.data.items.length,1);assert.ok(!('updated_by_user_id' in vehicleHistory.data.items[0]));
     assert.equal((await call('vehicles/people')).data.items.length,1);
+    const r2=await mf.getR2Bucket('VEHICLE_ATTACHMENTS'),attachmentPath='http://localhost/api/vehicles/'+vehicle.id+'/maintenance/'+vehicleHistory.data.items[0].id+'/attachments';
+    const uploaded=await mf.dispatchFetch(attachmentPath,{method:'POST',headers:{'Content-Type':'application/pdf','X-Attachment-Filename':'Receipt.pdf'},body:'%PDF-1.7\nSynthetic test only'});
+    assert.equal(uploaded.status,201);const attachment=(await uploaded.json()).item;
+    const downloaded=await mf.dispatchFetch(attachmentPath+'/'+attachment.id+'/file');assert.equal(downloaded.status,200);assert.match(await downloaded.text(),/%PDF/);
+    assert.equal((await r2.list()).objects.length,1);
+    assert.equal((await call('vehicles/'+vehicle.id+'/maintenance/'+vehicleHistory.data.items[0].id,'DELETE',{vehicle_version:5,version:1})).data.cleanup_pending,false);
+    assert.equal((await r2.list()).objects.length,0);assert.equal((await db.prepare('SELECT count(*) n FROM vehicle_attachments').first()).n,0);
     const pollRequest={id:crypto.randomUUID(),question:'Runtime poll',options:['Yes','No']};
     const poll=await call('polls','POST',pollRequest);assert.equal(poll.status,201,JSON.stringify(poll));
     assert.equal((await call('polls','POST',pollRequest)).status,200);
