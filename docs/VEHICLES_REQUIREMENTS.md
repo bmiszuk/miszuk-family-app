@@ -44,7 +44,8 @@ Vehicle list and details:
 
 Each maintenance record supports:
 
-- Vehicle, date (default today), mileage, category and description.
+- Vehicle, date (default today), optional Category and description. Description remains the primary explanation of what was done; Category may be left blank.
+- When provided, Category must be one of: Oil & Filter; Tires; Brakes; Battery; Fluids; Engine; Transmission; Suspension/Steering; Electrical; HVAC; Body/Glass; Inspection; Other.
 - One editable **Performed by** text field. It defaults visually to the authenticated person's first name, but may be overwritten with a shop, another person's name or another useful label.
 - Total cost and notes.
 - Optional attachments such as receipt/invoice photos, other images or PDFs.
@@ -64,7 +65,7 @@ Last-known mileage normally advances when a maintenance record contains a newer 
 - Completing applicable maintenance advances/resets its schedule.
 - Eventually surface useful upcoming/overdue maintenance on Home.
 
-Detailed category, scheduling and completion interactions remain to be designed.
+Detailed scheduling and completion interactions remain to be designed. The Phase 1 category list and optional behavior are fixed above.
 
 ## Fuel records
 
@@ -144,6 +145,7 @@ These phases are planning guidance, not irrevocable implementation boundaries. D
 - Administrator cross-household correction authority is explicit and feature-specific.
 - Phase 1 is account-menu access, with no Home card and no permanent bottom-navigation item.
 - Phase 1 maintenance uses an editable Performed by text field plus separate authenticated system metadata; no parts line items, OCR, or provider/DIY controls.
+- Phase 1 Category is optional and limited to the fixed list above; Description remains primary.
 - Phase 1 attachment UI is simple and may include receipt/invoice images and PDFs; binaries use R2 and metadata uses D1.
 
 ## Later-phase decisions
