@@ -11,7 +11,12 @@ export function VehicleDetails({vehicle,householdName,drivers,onEdit,onMileage,b
  <dl><div><dt>Status</dt><dd>{vehicle.status==='active'?'Active':'Sold / Inactive'}</dd></div>{householdName&&<div><dt>Household</dt><dd>{householdName}</dd></div>}{vehicle.primary_driver_id&&<div><dt>Primary driver</dt><dd>{driver?`${driver.first_name} ${driver.last_name||''}`.trim():'Reassign or clear previous driver'}</dd></div>}{Object.entries(labels).filter(([key])=>vehicle[key]!==null&&vehicle[key]!==undefined&&vehicle[key]!=='').map(([key,label])=><div key={key}><dt>{label}</dt><dd>{key==='purchase_mileage'?mileage(vehicle[key]):vehicle[key]}</dd></div>)}{vehicle.oil_filter_references.length>0&&<div><dt>Oil filters</dt><dd>{vehicle.oil_filter_references.map(f=>[f.brand,f.part_number].filter(Boolean).join(' ')).join(' · ')}</dd></div>}</dl>{attachments}</details>;
 }
 export function MaintenanceRow({record,onEdit,onDelete,busy,attachments}){
- return <article className="maintenance-row"><div className="maintenance-row-heading"><strong>{record.description}</strong><span>{date(record.service_date)}</span></div><div className="maintenance-meta">
- {record.mileage!==null&&<span>{mileage(record.mileage)} mi</span>}{record.category&&<span>{record.category}</span>}{record.performed_by&&<span>{record.performed_by}</span>}{record.total_cost_cents!==null&&<span>{new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(record.total_cost_cents/100)}</span>}</div>
- {record.notes&&<p className="maintenance-notes">{record.notes}</p>}{attachments}<div className="maintenance-actions"><button className="quiet" disabled={busy} onClick={()=>onEdit(record)}>Edit</button><DeleteButton label={record.description} disabled={busy} confirmationMessage={maintenanceDeletionConfirmation(record.attachment_count)} onDelete={()=>onDelete(record)}/></div></article>;
+ return <article className="maintenance-row"><div className="maintenance-row-heading">
+  <button type="button" className="maintenance-row-body" disabled={busy} aria-label={`Edit maintenance: ${record.description}`} onClick={()=>onEdit(record)}>
+   <span className="maintenance-row-title"><strong>{record.description}</strong><span>{date(record.service_date)}</span></span>
+   <span className="maintenance-meta">{record.mileage!==null&&<span>{mileage(record.mileage)} mi</span>}{record.category&&<span>{record.category}</span>}{record.performed_by&&<span>{record.performed_by}</span>}{record.total_cost_cents!==null&&<span>{new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(record.total_cost_cents/100)}</span>}</span>
+   {record.notes&&<span className="maintenance-notes">{record.notes}</span>}
+  </button>
+  <DeleteButton compact label={record.description} disabled={busy} confirmationMessage={maintenanceDeletionConfirmation(record.attachment_count)} onDelete={()=>onDelete(record)}/>
+ </div>{attachments}</article>;
 }

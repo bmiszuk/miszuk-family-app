@@ -5,11 +5,12 @@ import Dinner from '../features/dinner/Dinner.jsx';
 import Vehicles from '../features/vehicles/Vehicles.jsx';
 import Notifications, {SignOut} from '../features/notifications/Notifications.jsx';
 import {registerWorker} from '../features/notifications/browser.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import '../index.css';
 import Home from '../features/home/Home.jsx';
 import Directory from '../features/directory/Directory.jsx';
 import { sections, sectionFromHash } from './navigation.js';
+import { shouldDismissAccountMenu } from './accountMenu.js';
 import GroceryList from '../features/groceries/GroceryList.jsx';
 import FamilyNews from '../features/chat/Chat.jsx';
 import Calendar from '../features/calendar/Calendar.jsx';
@@ -27,7 +28,16 @@ export default function App() {
     window.scrollTo(0, 0);
     document.getElementById('main')?.focus({ preventScroll: true });
   }, [section]);
+  useEffect(() => {
+    const onPointerDown = event => {
+      const menu = accountMenuRef.current;
+      if (shouldDismissAccountMenu(menu, event.target)) menu.open = false;
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, []);
   const [member, setMember] = useState(null);
+  const accountMenuRef = useRef(null);
   const polls=usePollSummary(member?.account.id,member?.household?.id);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
@@ -43,7 +53,7 @@ export default function App() {
   return <div className="page">
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="hero"><div><h1><span className="brand-icon"><Icon name="home" /></span> Miszuk Family</h1></div>
-      {member && <details className="account-menu" key={section} onKeyDown={event=>{if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary').focus();}}}><summary>{member.person?.first_name.split(/\s+/)[0] || member.name} <span aria-hidden="true">▾</span></summary><div className="account-menu-items"><a href="#vehicles" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Vehicles</a><a href="#notifications" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Notifications</a>{!member.local && <SignOut userId={member.account.id} />}</div></details>}
+      {member && <details ref={accountMenuRef} className="account-menu" key={section} onKeyDown={event=>{if(event.key==='Escape'){event.currentTarget.open=false;event.currentTarget.querySelector('summary').focus();}}}><summary>{member.person?.first_name.split(/\s+/)[0] || member.name} <span aria-hidden="true">▾</span></summary><div className="account-menu-items"><a href="#vehicles" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Vehicles</a><a href="#notifications" onClick={event=>{event.currentTarget.closest('details').open=false;}}>Notifications</a>{!member.local && <SignOut userId={member.account.id} />}</div></details>}
     </header>
     {member && <nav className="section-nav app-nav" aria-label="Family sections">{sections.map(item => <a key={item.id} href={`#${item.id}`} aria-current={section === item.id ? 'page' : undefined}><Icon name={item.icon} /><span>{item.label}</span></a>)}</nav>}
     <main id="main" tabIndex={-1}>
