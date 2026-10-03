@@ -70,7 +70,7 @@ export async function createVehicle(db,user,household,input,options={}){
 export async function updateVehicle(db,user,id,version,input,options={}){
  revision(version);const {item,guard}=await vehicle(db,user,id,options,'vehicle.update');
  const record=validate(()=>{allowedFields(input,vehicleFields);return vehicleValues({...item,...input});});
- if(item.current_mileage!==null&&(record.current_mileage===null||record.current_mileage<item.current_mileage))throw new HttpError(400,'Use an explicit mileage correction to lower or clear last-known mileage.');
+ if(input.current_mileage!==undefined&&record.current_mileage!==item.current_mileage)throw new HttpError(400,'Use an explicit mileage correction to change last-known mileage.');
  const statements=[];
  if(options.administration)statements.push(audit(db,user,{...item,version},guard,'vehicle.correctAny',{operation:'update'}));
  statements.push(touch(db,user,item,guard,version,new Date().toISOString(),record));
@@ -117,7 +117,9 @@ async function changeMaintenance(db,user,vehicleId,id,vehicleVersion,version,inp
  const record=remove?{}:validate(()=>{allowedFields(input,maintenanceFields);return maintenanceValues({...existing,...input});});
  const now=new Date().toISOString(),keys=Object.keys(record),statements=[];
  if(options.administration)statements.push(audit(db,user,{...item,version:vehicleVersion},guard,'vehicle.correctAny',{operation:remove?'maintenance.delete':'maintenance.update',maintenance_id:id}));
- statements.push(touch(db,user,item,guard,vehicleVersion,now,remove?{}:{current_mileage:advanceMileage(item.current_mileage,record.mileage)}));
+ // Only a newly created maintenance record may advance current mileage. Editing
+ // historical details must never undo a later explicit mileage correction.
+ statements.push(touch(db,user,item,guard,vehicleVersion,now,{}));
  statements.push(db.prepare(`UPDATE vehicle_maintenance SET ${keys.map(k=>k+'=?,').join('')}
   ${remove?'deleted_at=?,deleted_by_user_id=?,':''}updated_at=?,updated_by_user_id=?,
   version=CASE WHEN version=? AND deleted_at IS NULL AND ${guard.sql} THEN version+1 ELSE NULL END WHERE id=? AND vehicle_id=?`)

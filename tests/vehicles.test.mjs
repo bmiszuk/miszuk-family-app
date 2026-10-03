@@ -99,7 +99,7 @@ test('Vehicle records persist every Phase 1 field and driver must be an active p
  await rejects(createVehicle(f.DB,f.user,defaultHousehold,{...input,updated_by_user_id:'admin'}),400);
 });
 
-test('Maintenance edits/deletion remain household-wide, versioned, attributed and never lower last-known mileage',async t=>{
+test('Only new maintenance may advance last-known mileage; edits/deletion preserve explicit correction state',async t=>{
  const f=setup(t),v=await createVehicle(f.DB,f.user,defaultHousehold,{...input,purchase_mileage:100});
  assert.equal(v.current_mileage,100);
  const m=await createMaintenance(f.DB,f.user,v.id,1,{description:'Oil changed',mileage:150,total_cost_cents:4599});
@@ -110,16 +110,31 @@ test('Maintenance edits/deletion remain household-wide, versioned, attributed an
  await updateMaintenance(f.DB,f.peer,v.id,m.id,2,1,{category:'Oil & Filter',performed_by:'Jensen Tire',mileage:200});
  records=await listMaintenance(f.DB,f.user,v.id);assert.equal(records[0].created_by_user_id,'local-account');assert.equal(records[0].updated_by_user_id,'peer');assert.equal(records[0].performed_by,'Jensen Tire');
  await rejects(updateMaintenance(f.DB,f.user,v.id,m.id,3,1,{notes:'Stale'}),409);
- assert.equal((await getVehicle(f.DB,f.user,v.id)).version,3);
- await updateMaintenance(f.DB,f.user,v.id,m.id,3,2,{mileage:120});assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,200);
+ assert.equal((await getVehicle(f.DB,f.user,v.id)).version,3);assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,150);
+ await updateMaintenance(f.DB,f.user,v.id,m.id,3,2,{mileage:120});assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,150);
  await deleteMaintenance(f.DB,f.peer,v.id,m.id,4,3);assert.deepEqual(await listMaintenance(f.DB,f.user,v.id),[]);
  const deleted=f.db.prepare('SELECT * FROM vehicle_maintenance WHERE id=?').get(m.id);assert.ok(deleted.deleted_at);assert.equal(deleted.deleted_by_user_id,'peer');
- assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,200);
- await rejects(updateVehicle(f.DB,f.user,v.id,5,{current_mileage:190}),400);
+ assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,150);
+ await rejects(updateVehicle(f.DB,f.user,v.id,5,{current_mileage:140}),400);
+ await rejects(updateVehicle(f.DB,f.user,v.id,5,{current_mileage:200}),400);
  await rejects(updateVehicle(f.DB,f.user,v.id,5,{current_mileage:null}),400);
  await rejects(correctVehicleMileage(f.DB,f.user,v.id,5,190,''),400);
- const corrected=await correctVehicleMileage(f.DB,f.user,v.id,5,190,'Correct odometer entry');assert.equal(corrected.current_mileage,190);
+ const corrected=await correctVehicleMileage(f.DB,f.user,v.id,5,90,'Correct odometer entry');assert.equal(corrected.current_mileage,90);
  assert.equal(f.db.prepare("SELECT action FROM security_audit").get().action,'vehicle.mileage.correct');
+});
+
+test('Manual mileage correction survives a later historical maintenance edit; new maintenance can advance it',async t=>{
+ const f=setup(t),v=await createVehicle(f.DB,f.user,defaultHousehold,{...input,purchase_mileage:100});
+ const historical=await createMaintenance(f.DB,f.user,v.id,1,{description:'Historical service',mileage:200});
+ assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,200);
+ const corrected=await correctVehicleMileage(f.DB,f.user,v.id,2,100,'Odometer was replaced');
+ assert.equal(corrected.current_mileage,100);assert.equal(corrected.version,3);
+ await updateMaintenance(f.DB,f.user,v.id,historical.id,3,1,{notes:'Added a missing note'});
+ const afterEdit=await getVehicle(f.DB,f.user,v.id);assert.equal(afterEdit.current_mileage,100);assert.equal(afterEdit.version,4);
+ const audit=f.db.prepare("SELECT details FROM security_audit WHERE action='vehicle.mileage.correct'").get();
+ assert.deepEqual(JSON.parse(audit.details),{operation:'mileage',from:200,to:100,reason:'Odometer was replaced'});
+ await createMaintenance(f.DB,f.user,v.id,4,{description:'New oil change',mileage:150});
+ assert.equal((await getVehicle(f.DB,f.user,v.id)).current_mileage,150);
 });
 
 test('Concurrent maintenance adds serialize on vehicle revision and stale writes leave no partial records/audits',async t=>{

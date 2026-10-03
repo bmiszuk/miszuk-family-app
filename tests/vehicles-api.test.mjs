@@ -32,6 +32,7 @@ test('Vehicles API supports sanitized CRUD, maintenance, Sold/Inactive and expli
  assert.equal((await f.request('/api/vehicles/'+v.id,'PATCH',{version:4,status:'sold_inactive'})).status,200);
  assert.equal((await f.request('/api/vehicles/'+v.id,'DELETE',{version:5})).status,405);
  assert.equal((await f.request('/api/vehicles/'+v.id,'PATCH',{version:5,current_mileage:900})).status,400);
+ assert.equal((await f.request('/api/vehicles/'+v.id,'PATCH',{version:5,current_mileage:1300})).status,400);
  assert.equal((await f.request('/api/vehicles/'+v.id+'/mileage','POST',{version:5,current_mileage:900,reason:'Correct odometer entry'})).status,200);
  assert.equal((await f.request('/api/vehicles/'+v.id)).data.item.current_mileage,900);
  assert.equal(f.db.prepare("SELECT count(*) n FROM security_audit WHERE action='vehicle.mileage.correct'").get().n,1);

@@ -33,7 +33,8 @@ test('Cloudflare runtime: migrations, shared writes, conflict checks, and persis
     await assert.rejects(updateMaintenance(db,vehicleUser,vehicle.id,maintenance.id,3,1,{mileage:200}),e=>e.status===409);
     assert.equal((await getVehicle(db,vehicleUser,vehicle.id)).version,3);
     await deleteMaintenance(db,vehicleUser,vehicle.id,maintenance.id,3,2);
-    assert.equal((await getVehicle(db,vehicleUser,vehicle.id)).current_mileage,120);
+    assert.equal((await getVehicle(db,vehicleUser,vehicle.id)).version,4);
+    assert.equal((await getVehicle(db,vehicleUser,vehicle.id)).current_mileage,100);
     const vehicleApi=await call('vehicles/'+vehicle.id);assert.equal(vehicleApi.status,200);assert.ok(!('created_by_user_id' in vehicleApi.data.item));
     assert.equal((await call('vehicles/'+vehicle.id+'/maintenance','POST',{vehicle_version:4,description:'Runtime API service',mileage:140})).status,201);
     const vehicleHistory=await call('vehicles/'+vehicle.id+'/maintenance');assert.equal(vehicleHistory.data.items.length,1);assert.ok(!('updated_by_user_id' in vehicleHistory.data.items[0]));

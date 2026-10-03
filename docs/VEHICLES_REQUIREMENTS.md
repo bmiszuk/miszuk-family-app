@@ -37,6 +37,7 @@ Vehicle list and details:
 - Phase 1 is opened from the authenticated user's account menu; it does not add a Home card or permanent mobile-navigation item.
 - The list is deliberately dense: one row per vehicle, with vehicle name and last-known mileage on the same line. Do not show Primary driver in the list.
 - Selecting a vehicle opens its maintenance history. Vehicle specifications/details are available through the vehicle name or a compact details control without becoming prominent list UI.
+- Vehicle details stay in a compact collapsible section. Tapping a displayed editable value opens an inline editor for that field, with explicit Save and Cancel; only one field is edited at a time. Household remains display-only under the current assignment policy. Vehicle files retain their compact disclosure and Notes retain the existing presentation.
 - A vehicle is not normally deleted. Mark it Sold/Inactive and retain its history.
 
 ## Maintenance and service records
@@ -55,7 +56,7 @@ Examples include repair invoices, tire receipts, parts receipts, alignment repor
 
 Persistent binary documents and images belong in Cloudflare R2, not D1. D1 holds attachment metadata and relationships through the Chunk 3 mechanism below. OCR is not part of Phase 1.
 
-Last-known mileage normally advances when a maintenance record contains a newer mileage. Provide a manual mileage update for cases where a maintenance record is unavailable or unsuitable; do not lower mileage silently without an explicit correction path.
+Only a newly created maintenance record may advance last-known mileage, and only when it contains a newer mileage. Editing or deleting a historical maintenance record never recomputes or changes the vehicle's current mileage. The Last-known mileage detail is directly editable; every deliberate change, including an increase, decrease or clearing the value, uses the reason-required, audited mileage-correction operation. Ordinary vehicle edits cannot change mileage.
 
 ## Not currently planned
 
@@ -165,10 +166,10 @@ Before any future fuel concept is scoped, clarify partial-fill calculations; bef
 
 - Migration `0012_vehicles.sql` adds `vehicles` and `vehicle_maintenance` only, without seeding or altering existing tables. Vehicle household is fixed on creation; household transfer is not implemented in this chunk.
 - Specification values that include units (oil capacity, pressures, wipers, socket size) remain readable text. Oil-filter references are a validated array of brand/part-number objects stored as JSON. Total cost is stored as integer cents; mileage is an optional nonnegative whole number.
-- `src/domain/vehicles.js` owns pure validation/defaults and monotonic mileage advancement. Dates default to today in America/Chicago. `src/api/vehicles/service.js` owns SQL scope, transactional persistence, driver validation and optimistic concurrency. It accepts trusted account-gate context, never an authenticated identity from a payload.
+- `src/domain/vehicles.js` owns pure validation/defaults and mileage advancement on new maintenance creation. Dates default to today in America/Chicago. `src/api/vehicles/service.js` owns SQL scope, transactional persistence, driver validation and optimistic concurrency. It accepts trusted account-gate context, never an authenticated identity from a payload.
 - Explicit actions are `vehicle.read`, `vehicle.create`, `vehicle.update`, `vehicle.mileage.correct`, and `vehicle.maintenance.create/update/delete`. They require the same household. Administrator `vehicle.readAny` and `vehicle.correctAny` must be requested explicitly; corrections are transactionally audited and still enforce validation. Directory relationships grant no rights.
 - Vehicle and maintenance writes recheck active/bound account, active person and household scope in SQL. Primary driver assignment must reference an active person in the vehicle household. If that person later moves or becomes inactive, a subsequent vehicle save must clear/reassign the driver; Directory changes do not silently rewrite vehicle history.
-- Maintenance mutations require the current vehicle revision as well as the maintenance revision for edits/deletion. They advance last-known mileage only upward. Deletion retains a soft-deleted record and never lowers mileage. Manual lowering/clearing uses a separate, reason-required, audited correction. Vehicle deletion is not exposed.
+- Maintenance mutations require the current vehicle revision as well as the maintenance revision for edits/deletion. Creation may advance last-known mileage; updates and deletion leave the vehicle mileage unchanged, preserving any later explicit correction. Deletion retains a soft-deleted record. Manual change/lowering/clearing uses the reason-required, audited mileage correction operation. Vehicle deletion is not exposed. Vehicle detail values use one-field-at-a-time inline editing with explicit Save/Cancel; household remains read-only.
 - Chunk 2 implements bounded/sanitized HTTP serialization and route integration behind the existing central account gate, plus the approved compact UI. Display labels derive from year/make/model/trim. Revisions refresh after maintenance saves and stale writes surface conflicts. Retired-household records remain stored; operations require active target households. No R2, attachment storage, schedules or notifications are included.
 
 ## Phase 1 Chunk 2 integration and recovery
