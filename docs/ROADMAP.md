@@ -32,17 +32,9 @@ Do not install or expose Photos until its prerequisites are verified. The WD Red
 
 ### Vehicles
 
-Follow [Vehicles requirements](VEHICLES_REQUIREMENTS.md); do not duplicate or prematurely resolve its open decisions. Planned phases:
+Vehicles Phase 1 is complete; see the device acceptance checks above. Follow [Vehicles requirements](VEHICLES_REQUIREMENTS.md) for implemented behavior and preserved future concepts. Fuel tracking/OCR, permanent receipt recognition, Inventory, warranties and reporting remain unsequenced ideas, not approved phases.
 
-1. Vehicles, specifications, maintenance history, permanent documents/photos — complete; see the device acceptance checks above.
-2. Maintenance schedules/reminders.
-3. Fuel tracking and temporary fuel-photo OCR.
-4. Permanent receipt/invoice recognition with user review.
-5. Optional parts/supplies Inventory, preserving historical costs.
-6. Warranties.
-7. Reporting/refinements: costs, MPG, fuel costs, inventory value, upcoming maintenance, warranties, history and export.
-
-Vehicle permissions must be explicit; neither Directory relationships nor household Grocery access defines them. Private R2 attachments follow the Chunk 3 operations above, with no independent binary backup. Phases remain revisable.
+Maintenance schedules, due/overdue tracking, reminders and a Vehicles maintenance Home card are **not planned**. No replacement Phase 2 is designated. Vehicle permissions remain explicit; neither Directory relationships nor household Grocery access defines them. Private R2 attachments follow the Chunk 3 operations above, with no independent binary backup.
 
 ### Other preserved ideas
 
@@ -71,7 +63,7 @@ The October 1, 2026 checkpoint is recorded in [Technical Health Review](TECHNICA
 These concrete items remain open; general health reviews do not replace or close them. Record evidence when an item is resolved.
 
 - **Operator handoff:** turn private helper locations and tested recovery artifacts into a successor-usable, secret-free runbook; document vault recovery and backup retention/restore ownership. Existing private artifacts alone are not a complete portable recovery process.
-- **Vehicles post-implementation review:** [October 2 findings](TECHNICAL_HEALTH_REVIEW.md#vehicles-phase-1-post-implementation-review) keep the architecture assessment coherent. V1/V2 (safe download extensions and explicit permanent-file deletion warning) were resolved in deployed release `6128b70`. Before Phase 2, address manual mileage corrections being undone by historical edits and retirement stranding Vehicles history (V3/V4). Track bounded cleanup pagination/failure tests and upload-audit interpretation as focused debt.
+- **Vehicles post-implementation review:** [October 2 findings](TECHNICAL_HEALTH_REVIEW.md#vehicles-phase-1-post-implementation-review) keep the architecture assessment coherent. V1/V2 (safe download extensions and explicit permanent-file deletion warning) were resolved in deployed release `6128b70`. V3/V4 (manual mileage corrections being undone by historical edits and household retirement stranding Vehicles history) remain technical debt, with no dependency on a planned Vehicles phase. Track bounded cleanup pagination/failure tests and upload-audit interpretation as focused debt.
 - **Migration history:** reconciled October 1, 2026; additive Vehicles migrations 0012–0013 followed. The remote ledger now records 0001–0013 exactly once; 0004–0007 were recorded as bookkeeping only because their schema was already present. Preserve the private export/evidence and never replay those migrations.
 - **Legacy data exposure review:** README records historical local database copies in Git. Verify repository access/history separately before any sharing or history cleanup; do not rewrite history as routine housekeeping.
 - **Notification operations:** retain documented delivery limits; decide ledger retention only if growth warrants it, preserving duplicate protection. Record real-device category results when available.

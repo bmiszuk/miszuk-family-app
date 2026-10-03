@@ -1,6 +1,6 @@
 # Vehicles requirements
 
-Status: Phase 1 Chunks 1–3 are implemented and deployed, including the data/domain foundation, scoped API, compact account-menu UI and private vehicle/maintenance attachments. Chunk 3 production release is `b8db621`, verified October 1, 2026 (America/Chicago). Physical-iPhone picker/HEIC and native Safari PDF-preview acceptance remain device checks, not later-phase functionality. Later Vehicles phases remain separate. See [Application boundaries](../ARCHITECTURE.md) for the current architecture.
+Status: Phase 1 Chunks 1–3 are implemented and deployed, including the data/domain foundation, scoped API, compact account-menu UI and private vehicle/maintenance attachments. Chunk 3 production release is `b8db621`, verified October 1, 2026 (America/Chicago). Physical-iPhone picker/HEIC and native Safari PDF-preview acceptance remain device checks, not later-phase functionality. Preserved future concepts below are unsequenced and are not approved implementation commitments. See [Application boundaries](../ARCHITECTURE.md) for the current architecture.
 
 ## Purpose
 
@@ -9,7 +9,6 @@ Vehicles should answer:
 - What vehicles are in each household?
 - What specifications and parts do they use?
 - What maintenance has been performed, and what did it cost?
-- What needs to be done next?
 - What parts are still under warranty?
 
 Vehicles is its own modular feature within the existing private family portal, following the ownership boundaries in ARCHITECTURE.md.
@@ -58,14 +57,14 @@ Persistent binary documents and images belong in Cloudflare R2, not D1. D1 holds
 
 Last-known mileage normally advances when a maintenance record contains a newer mileage. Provide a manual mileage update for cases where a maintenance record is unavailable or unsuitable; do not lower mileage silently without an explicit correction path.
 
-## Maintenance schedules
+## Not currently planned
 
-- Support mileage intervals, time intervals and whichever-comes-first rules.
-- Show due soon, due and overdue status.
-- Completing applicable maintenance advances/resets its schedule.
-- Eventually surface useful upcoming/overdue maintenance on Home.
+- Maintenance schedules or service intervals.
+- Due-soon, due or overdue tracking.
+- Maintenance reminders.
+- A Vehicles maintenance card on Home.
 
-Detailed scheduling and completion interactions remain to be designed. The Phase 1 category list and optional behavior are fixed above.
+No replacement Phase 2 feature is designated. The fixed Phase 1 category list and optional behavior are documented above.
 
 ## Fuel records
 
@@ -114,24 +113,24 @@ Warranty coverage belongs to the actual purchased part/batch, not only to a gene
 - Integrate Vehicle-specific policies with `src/api/shared/permissions.js`, including appropriate server-side query scope.
 - Centralized account roles and explicit Administrator controls already exist. Vehicles should add explicit actions to the shared policy layer rather than create a new role system.
 
-## Proposed development phases
+## Preserved future concepts
 
-1. Vehicles, specifications, household scope, Primary driver, dense list/details UI, maintenance history, lightweight records, mileage handling and simple attachments.
-2. Maintenance schedules and reminders.
-3. Fuel tracking and temporary fuel-photo OCR.
-4. Smart processing of permanent receipts/invoices.
-5. Optional parts/supplies Inventory.
-6. Warranty tracking.
-7. Reporting and refinements: vehicle/year costs, MPG/fuel costs, inventory value, upcoming maintenance, active warranties, lifetime history and export.
+These are unsequenced ideas, not an approved roadmap or implementation commitment:
 
-These phases are planning guidance, not irrevocable implementation boundaries. Dependencies and product decisions may change their order or scope; extension points should not become premature implementations.
+- Fuel tracking and temporary fuel-photo OCR.
+- Smart processing of permanent receipts/invoices.
+- Optional parts/supplies Inventory.
+- Warranty tracking.
+- Reporting and refinements such as vehicle/year costs, MPG/fuel costs, inventory value, active warranties, lifetime history and export.
+
+Dependencies and product decisions may change their order or scope; extension points should not become premature implementations.
 
 ## Architecture principles
 
 - Reuse existing Directory people and Households rather than duplicating them. A Directory person need not have a login identity.
 - Vehicles owns its pages, forms, validation, API and database concerns, following `src/features/<feature>` and `src/api/<feature>` ownership. Do not create empty modules merely to reserve names.
 - Keep browser/server-safe domain functions separate from React, database access and credentials.
-- Phase 1 is reached from the account menu. Phase 2 maintenance schedules may justify an optional per-user Home card; Vehicles would own that card and Home would only place it.
+- Vehicles remains available from the account menu. No maintenance schedules, due/overdue tracking, reminders or Vehicles Home card are currently planned.
 - Integrate through existing hash navigation and the app shell, rather than adding another permanent mobile bottom-navigation item.
 - Continue using the existing React app, Cloudflare Worker, Cloudflare Access and D1 database. Add R2 for persistent binary files when that functionality is implemented.
 - Preserve clean extension points for Inventory, warranties and OCR without prematurely implementing them.
@@ -148,9 +147,9 @@ These phases are planning guidance, not irrevocable implementation boundaries. D
 - Phase 1 Category is optional and limited to the fixed list above; Description remains primary.
 - Phase 1 attachment UI is simple and may include receipt/invoice images and PDFs; binaries use R2 and metadata uses D1. The finalized attachment rules are specified below.
 
-## Later-phase decisions
+## Open decisions for preserved future concepts
 
-Implementation planning must still clarify maintenance schedule thresholds, fuel-calculation handling of partial fills and warranty start/status rules. Preserve later phases for schedules, fuel, permanent receipt/invoice OCR, Inventory, warranties and reporting without pulling them into Phase 1.
+Before any future fuel concept is scoped, clarify partial-fill calculations; before any warranty concept is scoped, clarify warranty start/status rules. Maintenance schedules, due/overdue tracking, reminders and a Vehicles Home card are not planned.
 
 ## Finalized Phase 1 attachment decisions
 

@@ -10,7 +10,7 @@ export default function Home({member,polls}) {
  const directory=useDirectory();
  return <section className="home-view" aria-label="Home">
   <div className="home-grid">
-   {member.household ? <><PollHome summary={polls}/><Dinner member={member} compact/><GroceryHomeCard member={member}/></> : <NoHousehold/>}
+   {member.household ? <><Dinner member={member} compact/><PollHome summary={polls}/><GroceryHomeCard member={member}/></> : <NoHousehold/>}
    <CalendarHomeCard/>
    <FamilyNotices currentPersonId={member.person?.id} people={directory.data?.people || []}/>
   </div>
