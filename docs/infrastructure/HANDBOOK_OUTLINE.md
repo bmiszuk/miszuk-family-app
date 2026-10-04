@@ -64,7 +64,7 @@ Never record passwords, tokens, private keys, recovery codes, private calendar U
 - `src/api/<feature>` owns feature validation and persistence; shared authentication, identity, and permission modules enforce request boundaries.
 - Current features include Groceries, Dinner, Chat, Directory, Home summaries, and the read-only Cozi Calendar. Legacy APIs remain for compatibility.
 - Directory permits self, parent-to-child and spouse ordinary profile editing plus explicit Administrator correction. Administrators manage households, relationships and application accounts; Chat ownership and household-scoped Groceries/Dinner remain distinct policies. Users & Permissions through Phase 4 is complete.
-- The PWA is online-only with a notification-only service worker. Family enrollment and Birthday/Chat categories are deployed; see [Notifications](../NOTIFICATIONS.md) for remaining device checks and VAPID recovery. Local development and portable preview use separate local database state.
+- The PWA is online-only with a notification-only service worker. Family enrollment and Birthday/Chat/Polls categories are deployed; see [Notifications](../NOTIFICATIONS.md) for remaining device checks and VAPID recovery. Local development and portable preview use separate local database state.
 
 **Collect / verify**
 - [ ] Record the actually deployed revision, feature inventory, user-facing entry points, and known limitations.

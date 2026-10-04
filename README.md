@@ -4,16 +4,16 @@ A private family portal at https://family.miszuk.com, not a genealogy applicatio
 
 ## Current status
 
-Application baseline `4d3b89c`, documentation audited September 30, 2026. Architecture refactor and Users & Permissions through Phase 4 are complete. Existing application behavior is stable.
+Application baseline `c413623`. Architecture refactor and Users & Permissions through Phase 4 are complete. Existing application behavior is stable.
 
 - Home dashboard, household Groceries/requesters and Dinner signup.
 - Family Chat with author-owned messages and Home notices.
 - Directory people, birthdays (optional years), spouse/anniversary and parent/child relationships; a person need not have an account.
 - Read-only Cozi Calendar and Home upcoming events, displayed in America/Chicago. Legacy local calendar APIs/data remain for compatibility; the current UI does not edit them.
 - Explicit Administrator Directory/Household and account administration, with transactional audits and last-usable-Administrator protection.
-- Mobile navigation, installable House M PWA, voluntary per-device push enrollment and account-wide Birthday/Chat switches. No other notification triggers are enabled.
+- Mobile navigation, installable House M PWA, voluntary per-device push enrollment and account-wide Birthday/Chat/Polls switches. Birthdays, Family Chat and Poll announcements are the implemented automatic notification triggers.
 
-The physical-iPhone push foundation pilot passed. Chat between two family members and the first naturally scheduled birthday remain real-device category acceptance checks. See [notification operations](docs/NOTIFICATIONS.md).
+The physical-iPhone push foundation pilot passed. Chat between two family members, the first naturally scheduled birthday and a genuine Poll push remain real-device category acceptance checks. See [notification operations](docs/NOTIFICATIONS.md).
 
 ## Documentation map
 
@@ -21,7 +21,8 @@ The physical-iPhone push foundation pilot passed. Chat between two family member
 - [Architecture](ARCHITECTURE.md): current module and security boundaries.
 - [Users & Permissions](docs/USERS_PERMISSIONS.md) and [recovery](docs/PHASE3_RECOVERY.md): implemented policy, account operations and historical recovery checkpoints.
 - [Cozi](docs/cozi-calendar.md), [Notifications](docs/NOTIFICATIONS.md), [migrations](migrations/README.md): feature-specific operations.
-- [Vehicles](docs/VEHICLES_REQUIREMENTS.md), [Photos](docs/PHOTOS_REQUIREMENTS.md): unimplemented requirements, not authorization to build.
+- [Vehicles](docs/VEHICLES_REQUIREMENTS.md): Phase 1 core records, maintenance and private R2 attachments are implemented; remaining device acceptance checks and later concepts are documented there.
+- [Photos](docs/PHOTOS_REQUIREMENTS.md): an unimplemented future service requirement, not authorization to build.
 - [Digital Systems Handbook outline](docs/infrastructure/HANDBOOK_OUTLINE.md): successor/infrastructure information still to collect.
 
 ## Local development

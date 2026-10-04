@@ -56,13 +56,14 @@ The suite covers account gating, identity activation, permissions, household iso
 - Review the response shapes of generic records and compatibility APIs, then document or narrow fields when there is a concrete consumer and safe compatibility path.
 - Revisit duplicate polling/useCollection refresh behavior and display-helper boundaries if a feature change makes the cost visible.
 - Record the remaining real-device notification results and decide whether delivery volume justifies a queue or retry design.
+- Review older compatibility API responses that expose the historical `created_by` attribution value. This is unnecessary internal-identity disclosure, but it is not an authentication bypass and does not expose tokens or credentials. Newer features should continue using `app_users.id` foreign keys for authenticated attribution. Do not rewrite or guess historical attribution; a future focused cleanup may omit unnecessary `created_by` values from responses after verifying consumers.
 
 ### Known/acceptable debt — leave alone
 
 - Legacy `/api/people`, `/api/families` and `/api/events` routes and the original `families/events` tables, while external usage remains unknown.
 - The directional relationship representation and the existing household/default compatibility records.
 - Best-effort notification delivery and the two-UTC-cron schedule at current family scale.
-- Unimplemented original portal ideas (Photos, Vehicles, House Projects, Recipes and Documents) and deferred Poll features. Their requirements documents and roadmap are sufficient; do not prebuild infrastructure.
+- Unimplemented original portal ideas (Photos, House Projects, Recipes and Documents) and deferred Poll features. Vehicles Phase 1 is implemented; its remaining device checks and later concepts are tracked in the Vehicles requirements. Their requirements documents and roadmap are sufficient; do not prebuild infrastructure.
 
 ## Vehicles gate and next checkpoint
 

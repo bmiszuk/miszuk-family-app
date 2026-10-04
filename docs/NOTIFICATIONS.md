@@ -2,7 +2,7 @@
 
 ## Current status and remaining acceptance
 
-Deployed at `4d3b89c`: push infrastructure, voluntary family enrollment, Birthdays and Family Chat. Bob’s physical-iPhone foundation pilot passed and was recorded at `0ede46c`; do not repeat that pilot as unfinished implementation. Remaining real-device verification is **Chat between two family members** and **the first naturally scheduled birthday**. Confirm recipient/author behavior and Chat tap routing for the former, and 8 AM Chicago timing, duplicate suppression and Home tap routing for the latter. The category release passed 137 tests, lint/build and authenticated desktop/mobile browser verification; no production test messages or birthdays were created.
+Deployed push infrastructure, voluntary family enrollment, Birthdays, Family Chat and Polls. Bob’s physical-iPhone foundation pilot passed and was recorded at `0ede46c`; do not repeat that pilot as unfinished implementation. Remaining real-device verification is **Chat between two family members**, **the first naturally scheduled birthday** and **a genuine household Poll**. Confirm recipient/author behavior and tap routing for Chat, 8 AM Chicago timing and duplicate suppression for birthdays, and creator exclusion/generic content/tap-to-Home for Polls. No production test messages or synthetic birthdays were created.
 
 Family Polls V1 adds the third category; its physical-iPhone acceptance is pending. Use a genuine new poll from another household member, verify the exact generic content with the phone locked, creator exclusion and tap-to-Home. Verify opt-out on a later genuine poll. No rollout/test poll is published by deployment verification.
 
@@ -89,7 +89,7 @@ Phase 1B is production-verified on Bob's physical iPhone. Enrollment, locked-pho
 
 ## Phase 1B — completed Bob-only manual pilot (historical scope)
 
-Enrollment and self-test switches are enabled only in conjunction with the exact allowlist `2f1e9ed4-a0cb-433b-a30b-5aeab0138b30` (Bob’s existing active, bound application account). Administrator role is irrelevant. Every other account remains ineligible, including any future Administrator. No automatic Chat, Dinner, Calendar, poll, birthday or Vehicle notification exists. No migration or account mutation is required.
+The historical Phase 1B pilot used an exact Bob-only allowlist; that restriction was removed by Phase 1C. Current enrollment uses the eligible active provisioned-account audience, regardless of Administrator role. Birthday, Family Chat and Polls are implemented automatic categories; Dinner, Calendar, family dates and Vehicles remain reserved/deferred categories. No migration or account mutation was required for the enrollment expansion.
 
 The stable key ID is `miszuk-push-2026-09-30-v1`; contact remains `mailto:bob@miszuk.com`. Initial setup used an ephemeral loopback-only operator handoff: Web Crypto generated the pair in memory, Bob copied the recovery record directly into Bitwarden and confirmed saving it, then the helper uploaded the private key to the Worker secret. No plaintext private-key file or repository entry was created. The helper was stopped afterward. The vault save is operator-confirmed, not independently inspected by the application or AI.
 

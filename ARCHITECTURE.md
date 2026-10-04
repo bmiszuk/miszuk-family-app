@@ -2,7 +2,7 @@
 
 One React application, one Cloudflare Worker, and one D1 database remain the deployment unit.
 
-Status reviewed September 30, 2026 at application release `4d3b89c`: architecture refactor and Users & Permissions through Phase 4 are complete; family push enrollment and Birthday/Chat categories are deployed. Family Polls V1 is added in the October 1 release described below. See [Roadmap](docs/ROADMAP.md) for remaining acceptance checks and future work. No further refactor is required before feature development.
+Current application baseline `c413623`: architecture refactor and Users & Permissions through Phase 4 are complete; family push enrollment and Birthday/Chat/Polls categories are deployed. See [Roadmap](docs/ROADMAP.md) for remaining acceptance checks and future work. No further refactor is required before feature development.
 
 - `src/app`: shell, current-user loading and existing hash navigation.
 - `src/features`: feature pages and their Home cards. Home composes these cards; groceries owns Quick Add, calendar owns its summary, chat owns the pinned message, and Directory owns family dates.
