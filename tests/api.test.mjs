@@ -179,7 +179,7 @@ test('groceries derive requester from the account and reject changing or clearin
 
 test('grocery names resolve only inside the list household and preserve historical requester links',async t=>{
  const {request,db}=fixture(t);
- const person=(await request('/api/directory/people','POST',{first_name:'Other household person'})).data.item;
+ const person=(await request('/api/directory/people','POST',{first_name:'Other',last_name:'Household Person'})).data.item;
  const item=(await request('/api/groceries','POST',{name:'Legacy'})).data.item;
  assert.equal((await request('/api/groceries')).data.items[0].requester_name,'Local');
  db.prepare('UPDATE grocery_items SET requester_person_id=? WHERE id=?').run(person.id,item.id);
@@ -190,7 +190,9 @@ test('grocery names resolve only inside the list household and preserve historic
  assert.equal((await request('/api/groceries/'+item.id,'PATCH',{version:1,name:'Legacy edited'})).status,200);
  assert.equal(db.prepare('SELECT requester_person_id FROM grocery_items WHERE id=?').get(item.id).requester_person_id,person.id);
  db.prepare('UPDATE people SET household_id=? WHERE id=?').run(defaultHousehold,person.id);
- assert.equal((await request('/api/groceries')).data.items[0].requester_name,'Other household person');
+ const visible=(await request('/api/groceries')).data.items[0];
+ assert.equal(visible.requester_name,'Other');
+ assert.doesNotMatch(visible.requester_name,/Household Person/);
  db.prepare('UPDATE people SET deleted_at=CURRENT_TIMESTAMP WHERE id=?').run(person.id);
  assert.equal((await request('/api/groceries')).data.items[0].requester_name,null);
 });

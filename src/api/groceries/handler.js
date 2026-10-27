@@ -15,7 +15,7 @@ export async function handleGroceries(request,env,member,id) {
  if(request.method==='GET' && !id) {
   // Resolve display names within this list's household, never through the family-wide Directory.
   const {results}=await env.DB.prepare(`SELECT g.id,g.name,g.quantity,g.done,g.created_by,g.created_at,g.updated_at,g.version,g.household_id,g.requester_person_id,
-   CASE WHEN p.id IS NOT NULL THEN trim(p.first_name || ' ' || coalesce(p.last_name,'')) END AS requester_name
+   CASE WHEN p.id IS NOT NULL THEN trim(p.first_name) END AS requester_name
    FROM grocery_items g LEFT JOIN people p ON p.id=g.requester_person_id AND p.household_id=g.household_id AND p.deleted_at IS NULL
    WHERE g.household_id=? AND g.deleted_at IS NULL ORDER BY g.done ASC,g.created_at ASC,g.id ASC`).bind(householdId).all();
   return jsonResponse({items:results.map(item=>({...item,done:Boolean(item.done)}))});
