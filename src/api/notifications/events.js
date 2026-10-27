@@ -3,6 +3,7 @@ import {rollout,eligibleAccount,eligibilityArgs} from './policy.js';
 import {preferenceCondition} from './preferences.js';
 import {sendDevice} from './sender.js';
 import {celebrations,chicagoDate} from '../../domain/directoryDates.js';
+import {displayNames} from '../../domain/familyDisplay.js';
 
 const firstName=name=>String(name||'Family member').trim().split(/\s+/)[0].slice(0,80);
 export const birthdayPayload=name=>({version:1,title:'Birthday today',body:`It’s ${firstName(name)}’s birthday today.`,destination:'home'});
@@ -58,12 +59,15 @@ export async function notifyChat(env,postId,authorId) {
 export async function runBirthdays(env,time) {
  if(!birthdayRunTime(time)||env.NOTIFICATIONS_SENDING_ENABLED!=='true')return;
  const now=new Date(time),date=chicagoDate(now);
- const people=(await env.DB.prepare('SELECT id,first_name,birth_date FROM people WHERE deleted_at IS NULL AND birth_date IS NOT NULL').all()).results;
+ const people=(await env.DB.prepare('SELECT id,first_name,last_name,birth_date FROM people WHERE deleted_at IS NULL AND birth_date IS NOT NULL').all()).results;
+ const names=displayNames(people);
+ const namedPeople=people.map(person=>({...person,first_name:names.get(person.id)}));
  // Reuse the Home date rules, including optional years and Feb 29 observance.
- for(const birthday of celebrations(people,[],now,0))await deliverEvent(env,`${birthday.id}:${date}`,'birthdays',birthdayPayload(birthday.name));
+ for(const birthday of celebrations(namedPeople,[],now,0))await deliverEvent(env,`${birthday.id}:${date}`,'birthdays',birthdayPayload(birthday.name));
 }
 
 export async function notifyPoll(env,pollId){
  const poll=await env.DB.prepare('SELECT creator_user_id FROM polls WHERE id=?').bind(pollId).first();
  if(poll)return deliverEvent(env,'poll-published:'+pollId,'polls',{version:1,title:'Family Poll',body:'New poll — vote now',destination:'home'},poll.creator_user_id,pollId);
 }
+

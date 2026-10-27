@@ -1,16 +1,22 @@
 export function displayNames(people) {
-  const first = p => p.first_name.trim().split(/\s+/)[0];
+  const first = p => String(p.first_name || '').trim().split(/\s+/)[0];
   const same = (a,b) => a.toLocaleLowerCase() === b.toLocaleLowerCase();
+  const initial = p => String(p.last_name || '').trim().slice(0,1).toUpperCase();
   return new Map(people.map(p => {
     const peers = people.filter(other => same(first(other), first(p)));
     let name = first(p);
     if (peers.length > 1) {
-      name = `${name} ${p.last_name || ''}`.trim();
-      if (peers.filter(other => same(other.last_name || '', p.last_name || '')).length > 1) name = `${p.first_name} ${p.last_name || ''}`.trim();
+      const initials = peers.filter(other => same(initial(other), initial(p)));
+      name = initials.length === 1 ? name + ' ' + (initial(p) || '·') + '.' : (name + ' ' + (p.last_name || '')).trim();
+      if (initials.length > 1) {
+        name = [name, p.middle_name || ''].filter(Boolean).join(' ');
+        if (initials.filter(other => same(other.last_name || '', p.last_name || '') && same(other.middle_name || '', p.middle_name || '')).length > 1) name += ' · ' + String(p.id).slice(0,6);
+      }
     }
     return [p.id, name];
   }));
 }
+
 export function chronologicalMessages(posts) {
   return [...posts].sort((a,b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
 }
@@ -29,3 +35,4 @@ export function householdTitle(name, feature) {
   const household = (name || '').replace(/\bhousehold\b/gi, '').replace(/\s+/g, ' ').trim();
   return household ? household + ' ' + feature : feature;
 }
+

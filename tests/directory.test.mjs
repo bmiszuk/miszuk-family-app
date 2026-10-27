@@ -16,6 +16,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0006_households_dinner.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0014_middle_name.sql', import.meta.url), 'utf8'));
   db.exec(accountSeed);
   t.after(() => db.close());
   const DB = {
@@ -211,3 +212,4 @@ test('spouses edit profiles and anniversaries in both directions but cannot mana
   identify(db,a);
   assert.equal((await request(`/api/directory/relationships/${marriage.id}`,'DELETE',{version:3})).status,403);
 });
+

@@ -47,10 +47,11 @@ export default function Notifications({member}) {
         {marker && <button disabled={busy} onClick={() => perform(() => detachDevice(member.account.id))}>Disable on this device</button>}
         <button disabled={busy || !own || !state.config.sending_allowed} onClick={() => sendTest(own.id)}>Send test</button></div>
       <p>{state.devices.length} registered device{state.devices.length === 1 ? '' : 's'}.</p>
-      {state.config.sending_allowed && state.devices.length > 0 && <><h3>Your devices</h3><p className="muted">To test a locked phone, send to it from another browser signed in as you. Wait one minute between tests.</p><ul>{state.devices.map(device => <li key={device.id}>{device.device_label || 'Browser device'}{device.id === own?.id ? ' · this device' : ''} <button disabled={busy || !device.enabled} onClick={() => sendTest(device.id)}>Send test to {device.device_label || 'device'}</button></li>)}</ul></>}
+      {state.config.sending_allowed && state.devices.length > 0 && <><h3>Your devices</h3><p className="muted">To test a locked phone, send to it from another browser signed in as you. Wait one minute between tests.</p><ul>{state.devices.map(device => <li key={device.id}>{device.device_label || 'Browser device'}{device.id === own?.id ? ' · this device' : ''} <button disabled={busy || !device.enabled} onClick={() => { if (window.confirm('Remove this registered device?')) perform(() => api(`notifications/subscriptions/${encodeURIComponent(device.id)}`, {method:'DELETE'}), 'Device removed.'); }}>Remove</button></li>)}</ul></>}
       <fieldset><legend>Notification categories</legend>
         {[['birthdays','Birthdays'],['chat','Family Chat'],['polls','Polls']].map(([key,label])=><label className="notification-choice" key={key}><input type="checkbox" checked={state.preferences.categories[key]} disabled={busy} onChange={event=>{const enabled=event.target.checked;perform(()=>api('notifications/preferences',{method:'PATCH',body:{version:state.preferences.version,categories:{...state.preferences.categories,[key]:enabled}}}));}} />{label}</label>)}
       </fieldset><p className="muted">These choices apply to all your enrolled devices. Birthdays arrive at 8:00 AM Chicago time. Birthday/Chat notifications show first names, never Chat message text. Poll notifications never include the question.</p></>}
     {message && <p role="status">{message}</p>}<a href="#home">Back to Home</a>
   </section>;
 }
+

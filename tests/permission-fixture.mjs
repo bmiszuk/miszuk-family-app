@@ -19,6 +19,7 @@ export function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0011_household_polls.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0012_vehicles.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0013_vehicle_attachments.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0014_middle_name.sql', import.meta.url), 'utf8'));
   t.after(() => db.close());
   const DB = {
     prepare(sql) {
@@ -46,3 +47,4 @@ export function fixture(t) {
   }
   return { db, request, DB };
 }
+

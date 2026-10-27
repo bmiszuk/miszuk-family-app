@@ -9,7 +9,7 @@ import { ErrorMessage, DeleteButton, SectionHeader } from '../../shared/ui/Share
 import { familyDateLabel, parseFamilyDate } from '../../domain/directoryDates.js';
 import { canEditDirectoryPerson } from '../../domain/directoryPermissions.js';
 
-const fullName = person => person ? `${person.first_name} ${person.last_name || ''}`.trim() : 'Unknown person';
+const fullName = person => person ? `${person.first_name} ${person.middle_name || ''} ${person.last_name || ''}`.replace(/\s+/g, ' ').trim() : 'Unknown person';
 function DateFields({ value, prefix, title, optional = false }) {
   const date = parseFamilyDate(value);
   return <fieldset className="date-fields"><legend>{title}{optional ? ' (optional)' : ''}</legend>
@@ -31,10 +31,10 @@ function PersonForm({person,relationships,permissionRelationships,people,current
   const allowed=r=>!person || (r.relationship_type==='parent'?canEdit(r.person2_id):canEdit(r.person1_id)||canEdit(r.person2_id));
   return <form className="stack-form editor" onSubmit={event=>{
     event.preventDefault();const form=new FormData(event.currentTarget);
-    void onSave({first_name:form.get('first_name'),last_name:form.get('last_name'),birth_date:formDate(form,'birth'),...(administrator?{household_id:form.get('household_id')||null}:{}),relationship_versions:relationships.map(r=>r.id+':'+r.version).sort(),relationships:links.map(r=>({...r,anniversary_date:r.relationship_type==='spouse'?formDate(form,'wedding'+(r.id||r.draftId)):null}))});
+    void onSave({first_name:form.get('first_name'),middle_name:form.get('middle_name'),last_name:form.get('last_name'),birth_date:formDate(form,'birth'),...(administrator?{household_id:form.get('household_id')||null}:{}),relationship_versions:relationships.map(r=>r.id+':'+r.version).sort(),relationships:links.map(r=>({...r,anniversary_date:r.relationship_type==='spouse'?formDate(form,'wedding'+(r.id||r.draftId)):null}))});
   }}><h3>{person?'Edit person':'Add a person'}</h3><fieldset disabled={busy} className="plain-fields">
     <label>First name<input name="first_name" required maxLength={100} defaultValue={person?.first_name||''}/></label>
-    <label>Last name<input name="last_name" maxLength={100} defaultValue={person?.last_name||''}/></label>
+    <label>Middle name<input name="middle_name" maxLength={100} defaultValue={person?.middle_name||''}/></label><label>Last name<input name="last_name" maxLength={100} defaultValue={person?.last_name||''}/></label>
     {administrator && <fieldset><legend>Administrator · Household</legend><label>Household (optional)<select name="household_id" defaultValue={person?.household_id||''}><option value="">Not assigned</option>{households.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label></fieldset>}
     <DateFields value={person?.birth_date} prefix="birth" title="Birthday" optional/>
     <h3>{administrator?'Administrator · Relationships':'Relationships'}</h3>
@@ -98,3 +98,4 @@ export default function Directory({currentPersonId,administrator=false}) {
     </> : <p className="muted">Select a person to see their birthday and relationships.</p>}</div></div>
   </section>;
 }
+

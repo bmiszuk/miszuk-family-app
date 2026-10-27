@@ -10,7 +10,7 @@ export async function handlePeople(request, env) {
       return jsonResponse({ error: 'familyId must not be empty' }, 400);
     }
 
-    let query = 'SELECT id, family_id, first_name, last_name, nickname, birth_date, notes, created_at, updated_at FROM people';
+    let query = 'SELECT id, family_id, first_name, middle_name, last_name, nickname, birth_date, notes, created_at, updated_at FROM people';
     const params = [];
 
     if (familyId) {
@@ -54,13 +54,14 @@ export async function handlePeople(request, env) {
 
     try {
       const statement = env.DB.prepare(
-        'INSERT INTO people (id, family_id, first_name, last_name, nickname, birth_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        'INSERT INTO people (id, family_id, first_name, middle_name, last_name, nickname, birth_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
       );
       await statement
         .bind(
           personId,
           body.family_id.trim(),
           body.first_name.trim(),
+          body.middle_name?.trim() ?? null,
           body.last_name?.trim() ?? null,
           body.nickname?.trim() ?? null,
           body.birth_date?.trim() ?? null,
@@ -74,6 +75,7 @@ export async function handlePeople(request, env) {
             id: personId,
             family_id: body.family_id.trim(),
             first_name: body.first_name.trim(),
+            middle_name: body.middle_name?.trim() ?? null,
             last_name: body.last_name?.trim() ?? null,
             nickname: body.nickname?.trim() ?? null,
             birth_date: body.birth_date?.trim() ?? null,
@@ -89,3 +91,4 @@ export async function handlePeople(request, env) {
 
   return jsonResponse({ error: 'Method not allowed' }, 405);
 }
+

@@ -66,7 +66,7 @@ async function directoryRequest(request, env, kind, id, member) {
   if (request.method === 'DELETE') {
     record = await execute(db.prepare(`UPDATE ${kind} SET deleted_at=?, updated_at=?, version=version+1 WHERE id=? AND version=? AND deleted_at IS NULL ${kind === 'people' ? 'AND NOT EXISTS(SELECT 1 FROM app_users WHERE person_id=people.id)' : ''} RETURNING *`).bind(now, now, id, version(body)),kind,id,{sql:`EXISTS(SELECT 1 FROM ${kind} WHERE id=? AND version=? AND deleted_at IS NULL)`,args:[id,body.version]});
   } else if (kind === 'people') {
-    const values = [stringField(body.first_name, 'First name', 100), stringField(body.last_name, 'Last name', 100, false), dateField(body.birth_date, false)];
+    const values = [stringField(body.first_name, 'First name', 100), stringField(body.middle_name ?? '', 'Middle name', 100, false), stringField(body.last_name, 'Last name', 100, false), dateField(body.birth_date, false)];
     const email = id ? (await db.prepare('SELECT login_email FROM people WHERE id=?').bind(id).first())?.login_email || null : null;
     if (Object.hasOwn(body,'login_email') && (body.login_email || null) !== email) throw new HttpError(403,'Login email is managed separately from Directory profiles.');
     values.push(email);
@@ -106,3 +106,4 @@ export async function handleDirectory(request, env, kind, id, member) {
     throw error;
   }
 }
+

@@ -13,11 +13,11 @@ export async function saveDirectoryPerson({db,id,body,values,now,dateField,requi
     if(!Array.isArray(expected)||JSON.stringify([...expected].sort())!==JSON.stringify(existing.map(r=>r.id+':'+r.version).sort()))throw new HttpError(409,'Relationships changed. Refresh and reopen this person.');
   }
   const statements=[];
-  if(!id) statements.push(db.prepare('INSERT INTO people(id,family_id,first_name,last_name,birth_date,login_email,household_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)').bind(personId,family.family_id,...values,now,now));
+  if(!id) statements.push(db.prepare('INSERT INTO people(id,family_id,first_name,middle_name,last_name,birth_date,login_email,household_id,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)').bind(personId,family.family_id,...values,now,now));
   else {
     // A failing NOT NULL guard rolls back all staged changes in the D1 batch.
     const signature=existing.map(r=>r.id+':'+r.version).join(',');
-    statements.push(db.prepare("UPDATE people SET first_name=?,last_name=?,birth_date=?,login_email=?,household_id=?,updated_at=?,version=CASE WHEN version=? AND COALESCE((SELECT group_concat(token,',') FROM (SELECT id||':'||version AS token FROM relationships WHERE deleted_at IS NULL AND (person1_id=? OR person2_id=?) ORDER BY id)),'')=? THEN version+1 ELSE NULL END WHERE id=? AND deleted_at IS NULL").bind(...values,now,body.version,id,id,signature,id));
+    statements.push(db.prepare("UPDATE people SET first_name=?,middle_name=?,last_name=?,birth_date=?,login_email=?,household_id=?,updated_at=?,version=CASE WHEN version=? AND COALESCE((SELECT group_concat(token,',') FROM (SELECT id||':'||version AS token FROM relationships WHERE deleted_at IS NULL AND (person1_id=? OR person2_id=?) ORDER BY id)),'')=? THEN version+1 ELSE NULL END WHERE id=? AND deleted_at IS NULL").bind(...values,now,body.version,id,id,signature,id));
   }
   if(Object.hasOwn(body,'relationships')) {
     if(!Array.isArray(body.relationships)||body.relationships.length>200)throw new HttpError(400,'Invalid relationships.');
@@ -54,3 +54,4 @@ export async function saveDirectoryPerson({db,id,body,values,now,dateField,requi
   await db.batch([...audits.map(a=>privilegedAudit(db,member,a.action,a.type,a.target || personId,a.details,condition)),...statements]);
   return db.prepare('SELECT * FROM people WHERE id=?').bind(personId).first();
 }
+

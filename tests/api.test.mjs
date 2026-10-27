@@ -16,6 +16,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0006_households_dinner.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0014_middle_name.sql', import.meta.url), 'utf8'));
   db.exec(accountSeed);
   t.after(() => db.close());
   const DB = {
@@ -309,3 +310,4 @@ test('legacy families and people endpoints retain their existing response contra
  const people=await request('/api/people?familyId='+family.data.family.id);
  assert.equal(people.data.people[0].id,person.data.person.id);
 });
+
