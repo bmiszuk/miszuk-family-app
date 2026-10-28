@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { api } from '../../shared/client.js';
 import { useAction, useCollection } from '../../shared/useCollection.js';
 import { CollectionStatus, DeleteButton, SectionHeader } from '../../shared/ui/Shared.jsx';
+import StorePicker from './StorePicker.jsx';
+import { useStorePreference, storeLabel } from './store.js';
 const STORAGE_KEY = 'miszuk-grocery-list';
 function oldGroceries() {
   try {
@@ -17,12 +19,15 @@ function oldGroceries() {
 function GroceryForm({ item, busy, onSave, onCancel }) {
   const [name, setName] = useState(item?.name || '');
   const [quantity, setQuantity] = useState(item?.quantity || '');
+  const [preferredStore, setPreferredStore] = useStorePreference();
+  const [store, setStore] = useState(item?.store || preferredStore || 'any');
   return <form className="stack-form grocery-form" onSubmit={async event => {
     event.preventDefault();
-    if (await onSave({ name: name.trim(), quantity: quantity.trim(), done: item?.done || false })) { setName(''); setQuantity(''); }
+    if (await onSave({ name: name.trim(), quantity: quantity.trim(), store, done: item?.done || false })) { setName(''); setQuantity(''); }
   }}>
     <label>Item<input value={name} onChange={e => setName(e.target.value)} placeholder="Milk, apples, coffee…" maxLength={160} required disabled={busy} /></label>
     <label>Qty (optional)<input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="2 cartons" maxLength={80} disabled={busy} /></label><button className="grocery-submit" type="submit" aria-label={item ? "Save item" : "Add item"} disabled={busy || !name.trim()}>{item ? "✓" : "+"}</button>
+    <StorePicker value={store} onChange={next => { setStore(next); if (!item) setPreferredStore(next); }} />
     {onCancel && <button type="button" className="quiet" onClick={onCancel} disabled={busy}>Cancel editing</button>}
   </form>;
 }
@@ -38,7 +43,7 @@ export default function GroceryList({householdName}) {
   return <section className="card" id="groceries" aria-label="Grocery List">
     <SectionHeader icon="groceries" title={householdTitle(householdName, 'Groceries')} count={items.filter(item => !item.done).length} />
     {legacy && <div className="import-box"><p>You have {legacy.items.length} items saved on this browser.</p><button disabled={action.busy} onClick={() => action.run(async () => {
-      for (let start = 0; start < legacy.items.length; start += 100) await api('groceries/import', { method: 'POST', body: { items: legacy.items.slice(start, start + 100).map(item => ({ legacy_id: String(item.id), name: item.name, done: Boolean(item.done) })) } });
+      for (let start = 0; start < legacy.items.length; start += 100) await api('groceries/import', { method: 'POST', body: { items: legacy.items.slice(start, start + 100).map(item => ({ legacy_id: String(item.id), name: item.name, done: Boolean(item.done), store: 'any' })) } });
       try { localStorage.setItem(`${STORAGE_KEY}-imported`, legacy.saved); } catch { /* The shared import is already durable. */ }
       setLegacy(null);
     }, 'Your browser list is now shared.')}>Import into shared list</button></div>}
@@ -50,7 +55,7 @@ export default function GroceryList({householdName}) {
       {editing?.id === item.id ? <GroceryForm key={editing.id} item={editing} busy={action.busy} onCancel={() => setEditing(null)} onSave={async values => { const saved = await save(editing, values); if (saved) setEditing(null); return saved; }} /> : <>
         <div className="grocery-row">
           <label className="grocery-check"><input type="checkbox" aria-label={`Mark ${item.name} as ${item.done ? 'needed' : 'done'}`} checked={item.done} disabled={action.busy} onChange={() => save(item, { ...item, done: !item.done })} /></label>
-          <button type="button" className="grocery-text" disabled={action.busy} onClick={() => setEditing(item)} aria-label={`Edit ${item.name}`}><strong>{item.name}</strong>{item.quantity && <span className="grocery-quantity"> — {item.quantity}</span>}</button>
+          <button type="button" className="grocery-text" disabled={action.busy} onClick={() => setEditing(item)} aria-label={`Edit ${item.name}`}><strong>{item.name}</strong>{item.quantity && <span className="grocery-quantity"> — {item.quantity}</span>}{item.store && item.store !== 'any' && <span className="grocery-store-label"> · {storeLabel(item.store)}</span>}</button>
           {item.requester_person_id && <span className="grocery-requester" title={`Requested by ${item.requester_name || 'Former household member'}`}>{item.requester_name || 'Former household member'}</span>}
           <DeleteButton compact label={item.name} disabled={action.busy} onDelete={() => action.run(() => api(`groceries/${item.id}`, { method: 'DELETE', body: { version: item.version } }), 'Item removed.')} />
         </div>

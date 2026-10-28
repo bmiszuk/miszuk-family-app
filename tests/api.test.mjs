@@ -17,6 +17,7 @@ function fixture(t) {
   db.exec(readFileSync(new URL('../migrations/0007_household_retirement.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0008_application_accounts.sql', import.meta.url), 'utf8'));
   db.exec(readFileSync(new URL('../migrations/0014_middle_name.sql', import.meta.url), 'utf8'));
+  db.exec(readFileSync(new URL('../migrations/0015_grocery_store.sql', import.meta.url), 'utf8'));
   db.exec(accountSeed);
   t.after(() => db.close());
   const DB = {
@@ -311,3 +312,19 @@ test('legacy families and people endpoints retain their existing response contra
  assert.equal(people.data.people[0].id,person.data.person.id);
 });
 
+
+test('grocery store selection persists, defaults existing items to Any, and rejects invalid stores', async t => {
+  const {request,db}=fixture(t);
+  const legacy=(await request('/api/groceries','POST',{name:'Legacy'})).data.item;
+  assert.equal(legacy.store,'any');
+  const costco=(await request('/api/groceries','POST',{name:'Cheese',store:'costco'})).data.item;
+  assert.equal(costco.store,'costco');
+  assert.equal(db.prepare('SELECT store FROM grocery_items WHERE id=?').get(costco.id).store,'costco');
+  const edited=await request('/api/groceries/'+costco.id,'PATCH',{version:costco.version,store:'aldi'});
+  assert.equal(edited.status,200);
+  assert.equal(edited.data.item.store,'aldi');
+  assert.equal((await request('/api/groceries/'+costco.id,'PATCH',{version:edited.data.item.version,store:'Target'})).status,400);
+  const listed=(await request('/api/groceries')).data.items;
+  assert.equal(listed.find(item=>item.id===legacy.id).store,'any');
+  assert.equal(listed.find(item=>item.id===costco.id).store,'aldi');
+});
