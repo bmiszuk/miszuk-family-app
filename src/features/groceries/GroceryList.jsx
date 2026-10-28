@@ -27,7 +27,7 @@ function GroceryForm({ item, busy, onSave, onCancel }) {
   }}>
     <label>Item<input value={name} onChange={e => setName(e.target.value)} placeholder="Milk, apples, coffee…" maxLength={160} required disabled={busy} /></label>
     <label>Qty (optional)<input value={quantity} onChange={e => setQuantity(e.target.value)} placeholder="2 cartons" maxLength={80} disabled={busy} /></label><button className="grocery-submit" type="submit" aria-label={item ? "Save item" : "Add item"} disabled={busy || !name.trim()}>{item ? "✓" : "+"}</button>
-    <StorePicker value={store} onChange={next => { setStore(next); if (!item) setPreferredStore(next); }} />
+    <StorePicker value={store} onChange={next => { setStore(next); setPreferredStore(next); }} />
     {onCancel && <button type="button" className="quiet" onClick={onCancel} disabled={busy}>Cancel editing</button>}
   </form>;
 }
